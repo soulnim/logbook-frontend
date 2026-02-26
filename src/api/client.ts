@@ -1,6 +1,10 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+// VITE_API_URL is injected at build time (or replaced at runtime via entrypoint script).
+// Falls back to empty string so axios uses relative URLs (same-origin) as last resort.
+const BASE_URL = import.meta.env.VITE_API_URL === '__VITE_API_URL_PLACEHOLDER__'
+  ? ''
+  : (import.meta.env.VITE_API_URL || '')
 
 export const client = axios.create({
   baseURL: BASE_URL,
