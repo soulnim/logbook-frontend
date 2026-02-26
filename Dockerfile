@@ -6,19 +6,18 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# VITE_API_URL is injected by Railway at build time from your Variables tab
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────────────────────
 FROM nginx:alpine AS runtime
 
-RUN apk add --no-cache gettext
-
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-
-# Strip Windows CRLF line endings in case dev machine is Windows
-RUN sed -i 's/\r//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 EXPOSE 80
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
