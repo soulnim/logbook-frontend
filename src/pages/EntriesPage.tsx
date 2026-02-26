@@ -65,6 +65,8 @@ export function EntriesPage() {
   const [customEnd, setCustomEnd]           = useState('')
   const [showCustom, setShowCustom]         = useState(false)
   const [searchQuery, setSearchQuery]       = useState('')
+  const [topSearchQuery, setTopSearchQuery]  = useState('')
+  const [showTopSearch, setShowTopSearch]    = useState(false)
 
   // Data state
   const [entries, setEntries]               = useState<Entry[]>([])
@@ -101,15 +103,17 @@ export function EntriesPage() {
   }, [dateRange, activeType])
 
   // Client-side search filter on top of fetched entries
+  // Merge topbar search + filter bar search — either one narrows results
+  const effectiveSearch = topSearchQuery.trim() || searchQuery.trim()
   const filteredEntries = useMemo(() => {
-    if (!searchQuery.trim()) return entries
-    const q = searchQuery.toLowerCase()
+    if (!effectiveSearch) return entries
+    const q = effectiveSearch.toLowerCase()
     return entries.filter(e =>
       e.title.toLowerCase().includes(q) ||
       e.content?.toLowerCase().includes(q) ||
       e.tags.some(t => t.name.toLowerCase().includes(q))
     )
-  }, [entries, searchQuery])
+  }, [entries, effectiveSearch])
 
   const grouped = useMemo(() => groupByDate(filteredEntries), [filteredEntries])
 
@@ -140,7 +144,7 @@ export function EntriesPage() {
 
       {/* Topbar */}
       <header className="relative z-10 border-b border-border bg-bg/80 backdrop-blur-sm sticky top-0">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-7 h-7 rounded-md bg-card border border-border flex items-center justify-center">
@@ -152,7 +156,7 @@ export function EntriesPage() {
           </div>
 
           {/* Nav tabs */}
-          <nav className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+          <nav className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 shrink-0">
             <button
               onClick={() => navigate('/')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono text-secondary hover:text-primary hover:bg-hover transition-colors"
@@ -168,30 +172,60 @@ export function EntriesPage() {
             </button>
           </nav>
 
-          {/* User */}
+          {/* Search */}
+          <div className={`flex-1 max-w-sm transition-all duration-200 ${showTopSearch ? 'opacity-100' : 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto'}`}>
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <input
+                value={topSearchQuery}
+                onChange={e => setTopSearchQuery(e.target.value)}
+                placeholder="Search entries..."
+                className="w-full bg-surface border border-border rounded-md pl-8 pr-8 py-1.5 text-sm text-primary placeholder:text-muted focus:outline-none focus:border-accent/40 transition-colors font-body"
+              />
+              {topSearchQuery && (
+                <button onClick={() => setTopSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-hover"
+              onClick={() => setShowTopSearch(s => !s)}
+            >
+              <Search size={16} />
+            </button>
+
             {user && (
-              <>
+              <div className="flex items-center gap-2">
                 {user.avatarUrl && (
-                  <img src={user.avatarUrl} alt={user.name}
-                    className="w-7 h-7 rounded-full border border-border" />
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="w-7 h-7 rounded-full border border-border"
+                  />
                 )}
-                <span className="text-sm text-secondary hidden sm:block">
+                <span className="text-sm text-secondary font-body hidden sm:block">
                   {user.name.split(' ')[0]}
                 </span>
-                <button onClick={logout}
+                <button
+                  onClick={logout}
                   className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-secondary hover:bg-hover transition-colors"
-                  title="Sign out">
+                  title="Sign out"
+                >
                   <LogOut size={14} />
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
       </header>
 
       {/* Main */}
-      <main className="relative z-0 flex-1 max-w-5xl mx-auto w-full px-6 py-6 flex flex-col gap-5">
+      <main className="relative z-0 flex-1 max-w-7xl mx-auto w-full px-6 py-6 flex flex-col gap-5">
 
         {/* Page title */}
         <div>
