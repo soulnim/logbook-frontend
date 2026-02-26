@@ -2,42 +2,39 @@ import type { Config } from 'tailwindcss'
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Base surfaces
-        bg:      '#08080f',
-        surface: '#0e0e1a',
-        card:    '#13131f',
-        border:  '#1c1c2e',
-        hover:   '#1a1a2e',
+        // All colors are CSS variables — values swap on .dark / .light class
+        bg:      'var(--color-bg)',
+        surface: 'var(--color-surface)',
+        card:    'var(--color-card)',
+        border:  'var(--color-border)',
+        hover:   'var(--color-hover)',
 
-        // Text
-        primary:   '#e2e2f0',
-        secondary: '#8888a8',
-        muted:     '#44445a',
+        primary:   'var(--color-primary)',
+        secondary: 'var(--color-secondary)',
+        muted:     'var(--color-muted)',
 
-        // Accent — soft indigo
         accent: {
-          DEFAULT: '#818cf8',
-          dim:     '#4f56c4',
-          glow:    'rgba(129,140,248,0.15)',
+          DEFAULT: 'var(--color-accent)',
+          dim:     'var(--color-accent-dim)',
+          glow:    'var(--color-accent-glow)',
         },
 
-        // Heatmap greens (GitHub-inspired but desaturated for dark theme)
         heat: {
-          0: '#0e0e1a',
-          1: '#1a3a2a',
-          2: '#1e5c3a',
-          3: '#26a95a',
-          4: '#3dd68c',
+          0: 'var(--color-heat-0)',
+          1: 'var(--color-heat-1)',
+          2: 'var(--color-heat-2)',
+          3: 'var(--color-heat-3)',
+          4: 'var(--color-heat-4)',
         },
 
-        // Entry type colours
-        note:   '#818cf8',  // indigo
-        skill:  '#34d399',  // emerald
-        action: '#f59e0b',  // amber
-        event:  '#f472b6',  // pink
+        note:   'var(--color-note)',
+        skill:  'var(--color-skill)',
+        action: 'var(--color-action)',
+        event:  'var(--color-event)',
       },
       fontFamily: {
         display: ['"Syne"', 'sans-serif'],
