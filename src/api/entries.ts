@@ -1,12 +1,14 @@
 import { client } from './client'
-import type { Entry, CreateEntryRequest, UpdateEntryRequest } from '../types'
+import type { Entry, EntryType, CreateEntryRequest, UpdateEntryRequest } from '../types'
 
 export const entriesApi = {
   getByDate: (date: string) =>
     client.get<Entry[]>(`/api/entries/date/${date}`).then(r => r.data),
 
-  getByRange: (start: string, end: string) =>
-    client.get<Entry[]>('/api/entries/range', { params: { start, end } }).then(r => r.data),
+  getByRange: (start: string, end: string, type?: EntryType) =>
+    client.get<Entry[]>('/api/entries/range', {
+      params: { start, end, ...(type && { type }) }
+    }).then(r => r.data),
 
   getById: (id: number) =>
     client.get<Entry>(`/api/entries/${id}`).then(r => r.data),

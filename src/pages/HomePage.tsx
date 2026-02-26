@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { LogOut, Search, BookOpen, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { LogOut, Search, BookOpen, X, CalendarDays, List } from 'lucide-react'
 import { useEntryStore } from '../store/entryStore'
 import { useAuthStore } from '../store/authStore'
 import { MonthCalendar } from '../components/calendar/MonthCalendar'
@@ -7,12 +8,12 @@ import { EntryPanel } from '../components/entry/EntryPanel'
 import { YearHeatmap } from '../components/heatmap/YearHeatmap'
 import { StatsBar } from '../components/stats/StatsBar'
 import { entriesApi } from '../api/entries'
-import { useEntryStore as useStore } from '../store/entryStore'
 import type { Entry } from '../types'
 import { EntryCard } from '../components/entry/EntryCard'
 import { format, parseISO } from 'date-fns'
 
 export function HomePage() {
+  const navigate = useNavigate()
   const { user, logout }                       = useAuthStore()
   const { currentMonth, loadMonthEntries, loadHeatmap, heatmap, selectDate } = useEntryStore()
   const [searchQuery, setSearchQuery]          = useState('')
@@ -76,6 +77,23 @@ export function HomePage() {
               Logbook
             </span>
           </div>
+
+          {/* Nav tabs */}
+          <nav className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 shrink-0">
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono bg-accent/15 text-accent transition-colors"
+            >
+              <CalendarDays size={13} />
+              Calendar
+            </button>
+            <button
+              onClick={() => navigate('/entries')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono text-secondary hover:text-primary hover:bg-hover transition-colors"
+            >
+              <List size={13} />
+              Entries
+            </button>
+          </nav>
 
           {/* Search */}
           <div className={`flex-1 max-w-sm transition-all duration-200 ${showSearch ? 'opacity-100' : 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto'}`}>
