@@ -6,17 +6,21 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# VITE_API_URL is NOT needed at build time anymore — API_URL is injected at runtime
 RUN npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────────────────────
 FROM nginx:alpine AS runtime
 
-COPY --from=build /app/dist /usr/share/nginx/html
+# Install envsubst (comes with gettext)
+RUN apk add --no-cache gettext
 
-# SPA fallback — route all requests to index.html for React Router
+COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Entrypoint writes env.js from runtime env vars before nginx starts
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

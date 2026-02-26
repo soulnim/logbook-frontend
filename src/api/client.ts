@@ -1,6 +1,17 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+// Runtime config (injected by nginx from env vars) takes priority over build-time env
+// This allows API_URL to be set as a Railway Variable without rebuilding
+declare global {
+  interface Window {
+    __ENV__?: { API_URL?: string }
+  }
+}
+
+const BASE_URL =
+  window.__ENV__?.API_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:8080'
 
 export const client = axios.create({
   baseURL: BASE_URL,

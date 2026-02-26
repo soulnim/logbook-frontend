@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Logbook</title>
   <meta name="description" content="Your personal daily commit tracker" />
-  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,6 +17,8 @@
 </head>
 <body>
 <div id="root"></div>
+<!-- Runtime environment config injected by nginx -->
+<script src="/env.js"></script>
 <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
