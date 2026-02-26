@@ -17,21 +17,12 @@ RUN npm run build
 FROM nginx:alpine AS runtime
 
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Runtime env injection script
-RUN printf '#!/bin/sh\n\
-# Replace placeholder in built JS files with actual VITE_API_URL at runtime\n\
-if [ -n "$VITE_API_URL" ]; then\n\
-  find /usr/share/nginx/html/assets -name "*.js" -exec \\\n\
-    sed -i "s|__VITE_API_URL_PLACEHOLDER__|$VITE_API_URL|g" {} +\n\
-fi\n\
-# Start nginx using template (substitutes $PORT)\n\
-envsubst '"'"'$PORT'"'"' < /etc/nginx/templates/default.conf.template \\\n\
-  > /etc/nginx/conf.d/default.conf\n\
-exec nginx -g "daemon off;"\n' > /docker-entrypoint-custom.sh \
-  && chmod +x /docker-entrypoint-custom.sh
+# Runtime entrypoint: inject VITE_API_URL into JS and PORT into nginx config
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["/docker-entrypoint-custom.sh"]
+CMD ["/docker-entrypoint.sh"]
