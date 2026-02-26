@@ -83,11 +83,13 @@ export interface User {
 
 // ── UI Helpers ────────────────────────────────────────────────────────────────
 
+// Static meta — colors come from CSS variables via Tailwind (var(--color-note) etc.)
+// For inline styles we still need hex values; these are close enough for both themes
 export const ENTRY_TYPE_META: Record<EntryType, { label: string; color: string; bg: string; icon: string }> = {
-  NOTE:   { label: 'Note',   color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '📝' },
-  SKILL:  { label: 'Skill',  color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '🧠' },
-  ACTION: { label: 'Action', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: '⚡' },
-  EVENT:  { label: 'Event',  color: '#f472b6', bg: 'rgba(244,114,182,0.12)', icon: '📅' },
+  NOTE:   { label: 'Note',   color: 'var(--color-note)',   bg: 'color-mix(in srgb, var(--color-note) 12%, transparent)',   icon: '📝' },
+  SKILL:  { label: 'Skill',  color: 'var(--color-skill)',  bg: 'color-mix(in srgb, var(--color-skill) 12%, transparent)',  icon: '🧠' },
+  ACTION: { label: 'Action', color: 'var(--color-action)', bg: 'color-mix(in srgb, var(--color-action) 12%, transparent)', icon: '⚡' },
+  EVENT:  { label: 'Event',  color: 'var(--color-event)',  bg: 'color-mix(in srgb, var(--color-event) 12%, transparent)',  icon: '📅' },
 }
 
 export const MOOD_LABELS: Record<number, string> = {

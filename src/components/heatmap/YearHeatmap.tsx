@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useThemeStore } from '../../store/themeStore'
 import { format, parseISO, eachDayOfInterval, subDays } from 'date-fns'
 import type { HeatmapData } from '../../types'
 
@@ -7,17 +8,20 @@ interface YearHeatmapProps {
   onDayClick?: (date: string) => void
 }
 
-const HEAT_COLORS = [
-  '#0e0e1a', // 0 - no activity
-  '#1a3a2a', // 1 - light
-  '#1e5c3a', // 2 - medium
-  '#26a95a', // 3 - active
-  '#3dd68c', // 4 - very active
-]
+// Read from CSS variables so they update with light/dark theme
+function getHeatColors(): string[] {
+  const style = getComputedStyle(document.documentElement)
+  return [0, 1, 2, 3, 4].map(i =>
+    style.getPropertyValue(`--color-heat-${i}`).trim()
+  )
+}
 
 const WEEKS = 53
 
 export function YearHeatmap({ data, onDayClick }: YearHeatmapProps) {
+  const { theme } = useThemeStore()
+  // Re-derive colors whenever theme changes
+  const HEAT_COLORS = useMemo(() => getHeatColors(), [theme])
   const { days, months } = useMemo(() => {
     const today = new Date()
     const start = subDays(today, WEEKS * 7 - 1)
