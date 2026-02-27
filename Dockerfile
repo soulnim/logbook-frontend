@@ -24,7 +24,7 @@ COPY docker-entrypoint.sh /docker-entrypoint-custom.sh
 RUN chmod +x /docker-entrypoint-custom.sh
 
 # Set environment variable defaults (will be overridden by Railway)
-ENV BACKEND_HOST=localhost:8080
+ENV BACKEND_URL=http://localhost:8080
 ENV PORT=80
 
 EXPOSE 80

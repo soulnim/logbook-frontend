@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
-import { HomePage } from './pages/HomePage'
-import { LoginPage } from './pages/LoginPage'
+import { HomePage }         from './pages/HomePage'
+import { LoginPage }        from './pages/LoginPage'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { EntriesPage } from './pages/EntriesPage'
+import { SettingsPage }     from './pages/SettingsPage'
+import { EntriesPage }      from './pages/EntriesPage'
+import { StatsPage }        from './pages/StatsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -19,18 +20,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { loadUser } = useAuthStore()
-
   useEffect(() => { loadUser() }, [])
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login"         element={<LoginPage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/"              element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/entries"       element={<ProtectedRoute><EntriesPage /></ProtectedRoute>} />
-        <Route path="/settings"      element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        <Route path="*"              element={<Navigate to="/" replace />} />
+        <Route path="/login"          element={<LoginPage />} />
+        <Route path="/auth/callback"  element={<AuthCallbackPage />} />
+        <Route path="/"               element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/entries"        element={<ProtectedRoute><EntriesPage /></ProtectedRoute>} />
+        <Route path="/stats"          element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
+        <Route path="/settings"       element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="*"               element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
