@@ -9,10 +9,19 @@ if [ -z "$BACKEND_HOST" ]; then
     exit 1
 fi
 
-echo "Configuring nginx to proxy to: $BACKEND_HOST"
+# Use Railway's PORT if set, otherwise default to 80
+if [ -z "$PORT" ]; then
+    PORT=80
+fi
 
-# Replace placeholder in nginx config
-sed "s|BACKEND_HOST_PLACEHOLDER|${BACKEND_HOST}|g" /etc/nginx/nginx.template.conf > /etc/nginx/conf.d/default.conf
+echo "Configuring nginx..."
+echo "- Backend: $BACKEND_HOST"
+echo "- Listening on port: $PORT"
+
+# Replace placeholders in nginx config
+sed -e "s|BACKEND_HOST_PLACEHOLDER|${BACKEND_HOST}|g" \
+    -e "s|PORT_PLACEHOLDER|${PORT}|g" \
+    /etc/nginx/nginx.template.conf > /etc/nginx/conf.d/default.conf
 
 echo "Nginx configuration complete"
 echo "Starting nginx..."
