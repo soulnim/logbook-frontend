@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Pencil, Trash2, Check } from 'lucide-react'
-import type { Entry } from '../../types'
+import { Pencil, Trash2, Check, GitCommit, ExternalLink } from 'lucide-react'
+import type { Entry, GitHubSourceMeta } from '../../types'
 import { ENTRY_TYPE_META, MOOD_LABELS } from '../../types'
 import { TagBadge } from '../ui/TagBadge'
 import { entriesApi } from '../../api/entries'
@@ -12,10 +12,67 @@ interface EntryCardProps {
   onEdit: () => void
 }
 
+function parseSourceMeta(raw: string | null): GitHubSourceMeta | null {
+  if (!raw) return null
+  try { return JSON.parse(raw) } catch { return null }
+}
+
+function CommitList({ sourceMeta }: { sourceMeta: GitHubSourceMeta }) {
+  const [expanded, setExpanded] = useState(false)
+  const commits = sourceMeta.commits ?? []
+  const visible = expanded ? commits : commits.slice(0, 3)
+
+  return (
+    <div className="mt-2 rounded-lg overflow-hidden border border-border/60">
+      {/* Repo header */}
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-surface text-xs font-mono text-muted border-b border-border/60">
+        <GitCommit size={11} />
+        <span>{sourceMeta.repoFullName}</span>
+        <span className="ml-auto text-[10px] bg-border/60 px-1.5 py-0.5 rounded">
+          {sourceMeta.branch}
+        </span>
+      </div>
+
+      {/* Commits */}
+      <div className="divide-y divide-border/40">
+        {visible.map(commit => (
+          <div key={commit.sha} className="flex items-start gap-2 px-3 py-2 bg-card/50">
+            <span className="text-[10px] font-mono text-muted mt-0.5 shrink-0">
+              {commit.sha.substring(0, 7)}
+            </span>
+            <p className="text-xs text-text/80 flex-1 leading-relaxed line-clamp-2">
+              {commit.message.split('\n')[0]}
+            </p>
+            <a
+              href={commit.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted hover:text-accent shrink-0 mt-0.5 transition-colors"
+              onClick={e => e.stopPropagation()}
+            >
+              <ExternalLink size={10} />
+            </a>
+          </div>
+        ))}
+      </div>
+
+      {commits.length > 3 && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="w-full text-xs text-muted hover:text-text px-3 py-1.5 bg-surface border-t border-border/60 font-mono transition-colors"
+        >
+          {expanded ? '▲ Show less' : `▼ Show ${commits.length - 3} more`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function EntryCard({ entry, onEdit }: EntryCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const { removeEntry, updateEntry } = useEntryStore()
   const meta = ENTRY_TYPE_META[entry.entryType]
+  const sourceMeta = parseSourceMeta(entry.sourceMeta)
 
   const handleDelete = async () => {
     if (!confirm('Delete this entry?')) return
@@ -42,7 +99,6 @@ export function EntryCard({ entry, onEdit }: EntryCardProps) {
       {/* Header row */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Type badge */}
           <span
             className="text-xs font-mono px-1.5 py-0.5 rounded shrink-0"
             style={{ color: meta.color, backgroundColor: meta.bg }}
@@ -50,7 +106,6 @@ export function EntryCard({ entry, onEdit }: EntryCardProps) {
             {meta.icon} {meta.label}
           </span>
 
-          {/* Action completion toggle */}
           {entry.entryType === 'ACTION' && (
             <button
               onClick={handleToggleComplete}
@@ -65,12 +120,10 @@ export function EntryCard({ entry, onEdit }: EntryCardProps) {
           )}
         </div>
 
-        {/* Mood */}
         {entry.mood && (
           <span className="text-base shrink-0">{MOOD_LABELS[entry.mood]}</span>
         )}
 
-        {/* Actions — visible on hover */}
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button
             onClick={onEdit}
@@ -97,10 +150,17 @@ export function EntryCard({ entry, onEdit }: EntryCardProps) {
         {entry.title}
       </h4>
 
-      {/* Content */}
+      {/* COMMIT: show commit list */}
+      {entry.entryType === 'COMMIT' && sourceMeta && (
+        <CommitList sourceMeta={sourceMeta} />
+      )}
+
+      {/* Content / notes */}
       {entry.content && (
-        <p className="text-xs text-secondary font-body leading-relaxed mb-2 line-clamp-3">
-          {entry.content}
+        <p className={`text-xs text-secondary font-body leading-relaxed mb-2 line-clamp-3 ${
+          entry.entryType === 'COMMIT' ? 'mt-2 italic text-muted' : ''
+        }`}>
+          {entry.entryType === 'COMMIT' ? `💭 ${entry.content}` : entry.content}
         </p>
       )}
 

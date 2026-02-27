@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ThemeToggle } from '../components/ui/ThemeToggle'
-import { LogOut, Search, BookOpen, X, CalendarDays, List } from 'lucide-react'
+import { LogOut, Search, BookOpen, X, Settings } from 'lucide-react'
 import { useEntryStore } from '../store/entryStore'
 import { useAuthStore } from '../store/authStore'
 import { MonthCalendar } from '../components/calendar/MonthCalendar'
@@ -79,23 +78,6 @@ export function HomePage() {
             </span>
           </div>
 
-          {/* Nav tabs */}
-          <nav className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 shrink-0">
-            <button
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono bg-accent/15 text-accent transition-colors"
-            >
-              <CalendarDays size={13} />
-              Calendar
-            </button>
-            <button
-              onClick={() => navigate('/entries')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono text-secondary hover:text-primary hover:bg-hover transition-colors"
-            >
-              <List size={13} />
-              Entries
-            </button>
-          </nav>
-
           {/* Search */}
           <div className={`flex-1 max-w-sm transition-all duration-200 ${showSearch ? 'opacity-100' : 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto'}`}>
             <div className="relative">
@@ -135,7 +117,13 @@ export function HomePage() {
                 <span className="text-sm text-secondary font-body hidden sm:block">
                   {user.name.split(' ')[0]}
                 </span>
-                <ThemeToggle />
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-secondary hover:bg-hover transition-colors"
+                  title="Settings"
+                >
+                  <Settings size={14} />
+                </button>
                 <button
                   onClick={logout}
                   className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-secondary hover:bg-hover transition-colors"
