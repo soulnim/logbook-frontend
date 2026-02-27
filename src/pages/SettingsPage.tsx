@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Sun, Moon } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { useThemeStore } from '../store/themeStore'
 import { githubApi } from '../api/github'
 import type { GitHubStatus, RepoListItem } from '../types'
 
@@ -8,6 +10,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user, logout } = useAuthStore()
+  const { theme, setTheme } = useThemeStore()
 
   const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(true)
@@ -20,7 +23,6 @@ export function SettingsPage() {
   // Preference modal state
   const [showPrefModal, setShowPrefModal] = useState(false)
   const [syncOldCommits, setSyncOldCommits] = useState(false)
-  const [pendingCode, setPendingCode] = useState(false)
 
   useEffect(() => {
     loadStatus()
@@ -173,6 +175,38 @@ export function SettingsPage() {
           </div>
         </section>
 
+        {/* Appearance */}
+        <section>
+          <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">Appearance</h2>
+          <div className="bg-card border border-border rounded-xl p-5">
+            <p className="text-sm font-medium text-text mb-4">Theme</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg border text-sm font-mono transition-all ${
+                  theme === 'dark'
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border text-muted hover:text-text hover:bg-surface'
+                }`}
+              >
+                <Moon size={15} />
+                Dark
+              </button>
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg border text-sm font-mono transition-all ${
+                  theme === 'light'
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border text-muted hover:text-text hover:bg-surface'
+                }`}
+              >
+                <Sun size={15} />
+                Light
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* GitHub Integration */}
         <section>
           <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">Integrations</h2>
@@ -223,8 +257,8 @@ export function SettingsPage() {
                       githubStatus.syncEnabled ? 'bg-accent' : 'bg-border'
                     }`}
                   >
-                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow ${
-                      githubStatus.syncEnabled ? 'translate-x-6' : 'translate-x-1'
+                    <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow ${
+                      githubStatus.syncEnabled ? 'translate-x-5' : 'translate-x-0'
                     }`} />
                   </button>
                 </div>

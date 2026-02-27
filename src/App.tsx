@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { EntriesPage } from './pages/EntriesPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/login"         element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/"              element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/entries"       element={<ProtectedRoute><EntriesPage /></ProtectedRoute>} />
         <Route path="/settings"      element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="*"              element={<Navigate to="/" replace />} />
       </Routes>

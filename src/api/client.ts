@@ -1,10 +1,10 @@
 import axios from 'axios'
 
-// VITE_API_URL is injected at build time (or replaced at runtime via entrypoint script).
-// Falls back to empty string so axios uses relative URLs (same-origin) as last resort.
-const BASE_URL = import.meta.env.VITE_API_URL === '__VITE_API_URL_PLACEHOLDER__'
-  ? ''
-  : (import.meta.env.VITE_API_URL || '')
+// API calls use relative URLs — nginx proxies /api/* to the backend container.
+// This works in every environment (local Docker, staging, prod) with no rebuild.
+// VITE_API_URL is kept as an optional override for local non-Docker dev
+// (e.g. `npm run dev` against a local backend on port 8080).
+const BASE_URL = import.meta.env.VITE_API_URL || ''
 
 export const client = axios.create({
   baseURL: BASE_URL,

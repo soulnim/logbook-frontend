@@ -63,7 +63,7 @@ export function LoginPage() {
           {previousUsers.length > 0 && (
             <div className="pt-4 border-t border-border/70 space-y-3">
               <p className="text-xs text-secondary font-body">
-                Quick sign in
+                Continue as
               </p>
               <div className="flex flex-col gap-2">
                 {previousUsers.map((u) => (
@@ -84,7 +84,7 @@ export function LoginPage() {
                       <span className="text-xs text-muted">{u.email}</span>
                     </div>
                     <span className="ml-auto text-xs text-accent font-mono">
-                      Sign in
+                      Continue →
                     </span>
                   </button>
                 ))}

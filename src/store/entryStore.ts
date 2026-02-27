@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Entry, HeatmapData } from '../types'
 import { entriesApi } from '../api/entries'
 import { statsApi } from '../api/stats'
-import { format, subDays } from 'date-fns'
+import { format } from 'date-fns'
 
 interface EntryState {
   // Calendar state
@@ -82,11 +82,14 @@ export const useEntryStore = create<EntryState>((set, get) => ({
   loadHeatmap: async () => {
     set({ isLoadingHeatmap: true })
     try {
-      // Align backend range with what the heatmap component shows (up to "today" in the browser's timezone)
+      // Use local date formatting to avoid timezone boundary issues where
+      // new Date() in one timezone might be a different calendar date on the server.
       const today = new Date()
-      const start = format(subDays(today, 364), 'yyyy-MM-dd')
-      const end   = format(today, 'yyyy-MM-dd')
-      const heatmap = await statsApi.getHeatmap(start, end)
+      const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      const past = new Date(today)
+      past.setDate(past.getDate() - 364)
+      const localStart = `${past.getFullYear()}-${String(past.getMonth() + 1).padStart(2, '0')}-${String(past.getDate()).padStart(2, '0')}`
+      const heatmap = await statsApi.getHeatmap(localStart, localToday)
       set({ heatmap, isLoadingHeatmap: false })
     } catch {
       set({ isLoadingHeatmap: false })
