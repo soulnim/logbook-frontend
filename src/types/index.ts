@@ -1,6 +1,6 @@
 // ── Entry Types ───────────────────────────────────────────────────────────────
 
-export type EntryType = 'NOTE' | 'SKILL' | 'ACTION' | 'EVENT'
+export type EntryType = 'NOTE' | 'SKILL' | 'ACTION' | 'EVENT' | 'COMMIT'
 
 export interface Tag {
   id: number
@@ -19,6 +19,7 @@ export interface Entry {
   isCompleted: boolean
   mood: number | null     // 1-5
   tags: Tag[]
+  sourceMeta: string | null  // JSON string for COMMIT entries
   createdAt: string
   updatedAt: string
 }
@@ -44,6 +45,46 @@ export interface UpdateEntryRequest {
   isCompleted?: boolean
   mood?: number
   tags?: string[]
+}
+
+// ── GitHub ────────────────────────────────────────────────────────────────────
+
+export interface GitHubCommit {
+  sha: string
+  message: string
+  url: string
+  timestamp: string
+  authorName: string
+}
+
+export interface GitHubSourceMeta {
+  repoFullName: string
+  repoName: string
+  branch: string
+  commits: GitHubCommit[]
+}
+
+export interface GitHubStatus {
+  connected: boolean
+  githubUsername: string | null
+  syncEnabled: boolean
+  syncFrom: string | null
+  watchedRepos: WatchedRepo[]
+}
+
+export interface WatchedRepo {
+  id: number
+  repoFullName: string
+  repoName: string
+  isActive: boolean
+}
+
+export interface RepoListItem {
+  fullName: string
+  name: string
+  isPrivate: boolean
+  description: string | null
+  alreadyWatched: boolean
 }
 
 // ── Stats / Heatmap ───────────────────────────────────────────────────────────
@@ -83,13 +124,12 @@ export interface User {
 
 // ── UI Helpers ────────────────────────────────────────────────────────────────
 
-// Static meta — colors come from CSS variables via Tailwind (var(--color-note) etc.)
-// For inline styles we still need hex values; these are close enough for both themes
 export const ENTRY_TYPE_META: Record<EntryType, { label: string; color: string; bg: string; icon: string }> = {
-  NOTE:   { label: 'Note',   color: 'var(--color-note)',   bg: 'color-mix(in srgb, var(--color-note) 12%, transparent)',   icon: '📝' },
-  SKILL:  { label: 'Skill',  color: 'var(--color-skill)',  bg: 'color-mix(in srgb, var(--color-skill) 12%, transparent)',  icon: '🧠' },
-  ACTION: { label: 'Action', color: 'var(--color-action)', bg: 'color-mix(in srgb, var(--color-action) 12%, transparent)', icon: '⚡' },
-  EVENT:  { label: 'Event',  color: 'var(--color-event)',  bg: 'color-mix(in srgb, var(--color-event) 12%, transparent)',  icon: '📅' },
+  NOTE:   { label: 'Note',   color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '📝' },
+  SKILL:  { label: 'Skill',  color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '🧠' },
+  ACTION: { label: 'Action', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: '⚡' },
+  EVENT:  { label: 'Event',  color: '#f472b6', bg: 'rgba(244,114,182,0.12)', icon: '📅' },
+  COMMIT: { label: 'Commit', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '🔀' },
 }
 
 export const MOOD_LABELS: Record<number, string> = {

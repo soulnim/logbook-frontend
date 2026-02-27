@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, subDays, startOfMonth, endOfMonth, startOfYear } from 'date-fns'
-import { ThemeToggle } from '../components/ui/ThemeToggle'
-import { LogOut, BookOpen, CalendarDays, List, Filter, ChevronDown, X, Search } from 'lucide-react'
+import { LogOut, BookOpen, CalendarDays, List, Filter, ChevronDown, X, Search, Settings } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useEntryStore } from '../store/entryStore'
 import { entriesApi } from '../api/entries'
@@ -212,7 +211,13 @@ export function EntriesPage() {
                 <span className="text-sm text-secondary font-body hidden sm:block">
                   {user.name.split(' ')[0]}
                 </span>
-                <ThemeToggle />
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-secondary hover:bg-hover transition-colors"
+                  title="Settings"
+                >
+                  <Settings size={14} />
+                </button>
                 <button
                   onClick={logout}
                   className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-secondary hover:bg-hover transition-colors"

@@ -6,6 +6,8 @@ export const authApi = {
     client.get<User>('/api/auth/me').then(r => r.data),
 
   loginWithGoogle: () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/login/google`
+    // Use a relative URL — nginx proxies /api/* to the backend.
+    // This avoids hardcoding any hostname and works in every environment.
+    window.location.href = '/api/auth/login/google'
   },
 }

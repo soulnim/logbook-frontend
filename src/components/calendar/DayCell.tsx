@@ -11,7 +11,7 @@ interface DayCellProps {
   onClick: () => void
 }
 
-const TYPE_ORDER = ['NOTE', 'SKILL', 'ACTION', 'EVENT'] as const
+const TYPE_ORDER = ['NOTE', 'SKILL', 'ACTION', 'EVENT', 'COMMIT'] as const
 
 export function DayCell({ date, currentMonth, entries, isSelected, onClick }: DayCellProps) {
   const isCurrentMonth = isSameMonth(date, currentMonth)
