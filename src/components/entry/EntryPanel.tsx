@@ -36,12 +36,12 @@ export function EntryPanel() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-20 bg-bg/60 backdrop-blur-sm"
+        className="fixed inset-x-0 bottom-0 top-14 z-20 bg-bg/60 backdrop-blur-sm"
         onClick={closePanel}
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 bottom-0 z-30 w-full max-w-md bg-surface border-l border-border flex flex-col animate-slide-in shadow-2xl">
+      <div className="fixed right-0 top-14 bottom-0 z-30 w-full max-w-md bg-surface border-l border-border flex flex-col animate-slide-in shadow-2xl">
         {/* Panel header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div>
