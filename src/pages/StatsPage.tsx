@@ -3,13 +3,15 @@ import { format, parseISO, subDays, getDay } from 'date-fns'
 import {
   BarChart2, Flame, CalendarDays, TrendingUp, Sparkles,
   BookOpen, Zap, Brain, GitCommit, Star, Send, RefreshCw,
+  Target, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
 import { statsApi } from '../api/stats'
+import { goalsApi } from '../api/goals'
 import { aiApi, type InsightType, type InsightResponse } from '../api/ai'
 import { Navbar } from '../components/layout/Navbar'
 import { EntryCard } from '../components/entry/EntryCard'
 import { useEntryStore } from '../store/entryStore'
-import type { StatsData, HeatmapData, EntryType } from '../types'
+import type { StatsData, HeatmapData, EntryType, GoalSummary } from '../types'
 import { ENTRY_TYPE_META } from '../types'
 
 // ── Insight type config ───────────────────────────────────────────────────────
@@ -26,6 +28,7 @@ const INSIGHT_OPTIONS: {
   { type: 'PRODUCTIVITY_CHECK',label: 'Productivity check', emoji: '⚡', description: 'How are my tasks going?',        period: '30 days' },
   { type: 'COMMIT_DIGEST',     label: 'Commit digest',     emoji: '🔀', description: 'Summarise my GitHub commits',    period: '7 days'  },
   { type: 'MOTIVATE_ME',       label: 'Motivate me',       emoji: '💬', description: 'Encouragement from my progress', period: '7 days'  },
+  { type: 'GOALS_CHECK',        label: 'Goals check',       emoji: '🎯', description: 'How are my goals going?',        period: 'active'  },
 ]
 
 // ── Mini chart components ─────────────────────────────────────────────────────
@@ -244,13 +247,14 @@ function AiInsightsPanel() {
 
 export function StatsPage() {
   const { selectDate } = useEntryStore()
-  const [stats,     setStats]     = useState<StatsData | null>(null)
-  const [heatmap,   setHeatmap]   = useState<HeatmapData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [stats,       setStats]       = useState<StatsData | null>(null)
+  const [heatmap,     setHeatmap]     = useState<HeatmapData | null>(null)
+  const [goalSummary, setGoalSummary] = useState<GoalSummary | null>(null)
+  const [isLoading,   setIsLoading]   = useState(true)
 
   useEffect(() => {
-    Promise.all([statsApi.getStats(), statsApi.getHeatmap()])
-      .then(([s, h]) => { setStats(s); setHeatmap(h) })
+    Promise.all([statsApi.getStats(), statsApi.getHeatmap(), goalsApi.getSummary()])
+      .then(([s, h, g]) => { setStats(s); setHeatmap(h); setGoalSummary(g as GoalSummary) })
       .catch(console.error)
       .finally(() => setIsLoading(false))
   }, [])
@@ -404,6 +408,47 @@ export function StatsPage() {
             })}
           </div>
         </div>
+
+        {/* ── Goals summary ── */}
+        {goalSummary && (goalSummary.activeCount > 0 || goalSummary.completedCount > 0) && (
+          <div className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs font-mono text-muted uppercase tracking-widest">Goals</h2>
+              <a href="/goals" className="text-xs font-mono text-accent hover:underline">View all →</a>
+            </div>
+            <div className="flex gap-4 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent/10">
+                  <Target size={14} className="text-accent" />
+                </div>
+                <div>
+                  <p className="text-lg font-display font-bold text-primary leading-none">{goalSummary.activeCount}</p>
+                  <p className="text-[10px] font-mono text-muted">Active</p>
+                </div>
+              </div>
+              {goalSummary.overdueCount > 0 && (
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-400/10">
+                    <AlertTriangle size={14} className="text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-display font-bold text-red-400 leading-none">{goalSummary.overdueCount}</p>
+                    <p className="text-[10px] font-mono text-muted">Overdue</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-400/10">
+                  <CheckCircle2 size={14} className="text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-lg font-display font-bold text-primary leading-none">{goalSummary.completedCount}</p>
+                  <p className="text-[10px] font-mono text-muted">Completed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── AI Insights ── */}
         <AiInsightsPanel />
