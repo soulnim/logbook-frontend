@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, Clock } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { githubApi } from '../api/github'
@@ -9,7 +9,7 @@ import type { GitHubStatus, RepoListItem } from '../types'
 export function SettingsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { user, logout } = useAuthStore()
+  const { user, logout, updateTimezone } = useAuthStore()
   const { theme, setTheme } = useThemeStore()
 
   const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null)
@@ -19,6 +19,10 @@ export function SettingsPage() {
   const [showRepos, setShowRepos] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  // Timezone state
+  const [tzSearch, setTzSearch] = useState('')
+  const [tzSaving, setTzSaving] = useState(false)
 
   // Preference modal state
   const [showPrefModal, setShowPrefModal] = useState(false)
@@ -139,6 +143,86 @@ export function SettingsPage() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  // Common IANA timezones grouped for the dropdown
+  const TIMEZONES = [
+    // UTC
+    { value: 'UTC',                      label: 'UTC — Coordinated Universal Time' },
+    // Americas
+    { value: 'America/New_York',         label: 'America/New_York (EST/EDT, UTC-5/4)' },
+    { value: 'America/Chicago',          label: 'America/Chicago (CST/CDT, UTC-6/5)' },
+    { value: 'America/Denver',           label: 'America/Denver (MST/MDT, UTC-7/6)' },
+    { value: 'America/Los_Angeles',      label: 'America/Los_Angeles (PST/PDT, UTC-8/7)' },
+    { value: 'America/Anchorage',        label: 'America/Anchorage (AKST/AKDT, UTC-9/8)' },
+    { value: 'America/Sao_Paulo',        label: 'America/Sao_Paulo (BRT, UTC-3)' },
+    { value: 'America/Argentina/Buenos_Aires', label: 'America/Buenos_Aires (ART, UTC-3)' },
+    { value: 'America/Toronto',          label: 'America/Toronto (EST/EDT, UTC-5/4)' },
+    { value: 'America/Vancouver',        label: 'America/Vancouver (PST/PDT, UTC-8/7)' },
+    { value: 'America/Mexico_City',      label: 'America/Mexico_City (CST/CDT, UTC-6/5)' },
+    // Europe
+    { value: 'Europe/London',            label: 'Europe/London (GMT/BST, UTC+0/1)' },
+    { value: 'Europe/Paris',             label: 'Europe/Paris (CET/CEST, UTC+1/2)' },
+    { value: 'Europe/Berlin',            label: 'Europe/Berlin (CET/CEST, UTC+1/2)' },
+    { value: 'Europe/Madrid',            label: 'Europe/Madrid (CET/CEST, UTC+1/2)' },
+    { value: 'Europe/Rome',              label: 'Europe/Rome (CET/CEST, UTC+1/2)' },
+    { value: 'Europe/Amsterdam',         label: 'Europe/Amsterdam (CET/CEST, UTC+1/2)' },
+    { value: 'Europe/Moscow',            label: 'Europe/Moscow (MSK, UTC+3)' },
+    { value: 'Europe/Istanbul',          label: 'Europe/Istanbul (TRT, UTC+3)' },
+    { value: 'Europe/Warsaw',            label: 'Europe/Warsaw (CET/CEST, UTC+1/2)' },
+    { value: 'Europe/Stockholm',         label: 'Europe/Stockholm (CET/CEST, UTC+1/2)' },
+    // Africa
+    { value: 'Africa/Cairo',             label: 'Africa/Cairo (EET, UTC+2)' },
+    { value: 'Africa/Johannesburg',      label: 'Africa/Johannesburg (SAST, UTC+2)' },
+    { value: 'Africa/Lagos',             label: 'Africa/Lagos (WAT, UTC+1)' },
+    { value: 'Africa/Nairobi',           label: 'Africa/Nairobi (EAT, UTC+3)' },
+    // Middle East
+    { value: 'Asia/Dubai',               label: 'Asia/Dubai (GST, UTC+4)' },
+    { value: 'Asia/Riyadh',              label: 'Asia/Riyadh (AST, UTC+3)' },
+    { value: 'Asia/Tehran',              label: 'Asia/Tehran (IRST/IRDT, UTC+3:30/4:30)' },
+    { value: 'Asia/Baghdad',             label: 'Asia/Baghdad (AST, UTC+3)' },
+    // Asia
+    { value: 'Asia/Kolkata',             label: 'Asia/Kolkata (IST, UTC+5:30)' },
+    { value: 'Asia/Karachi',             label: 'Asia/Karachi (PKT, UTC+5)' },
+    { value: 'Asia/Dhaka',               label: 'Asia/Dhaka (BST, UTC+6)' },
+    { value: 'Asia/Yangon',              label: 'Asia/Yangon (MMT, UTC+6:30)' },
+    { value: 'Asia/Bangkok',             label: 'Asia/Bangkok (ICT, UTC+7)' },
+    { value: 'Asia/Jakarta',             label: 'Asia/Jakarta (WIB, UTC+7)' },
+    { value: 'Asia/Ho_Chi_Minh',         label: 'Asia/Ho_Chi_Minh (ICT, UTC+7)' },
+    { value: 'Asia/Kuala_Lumpur',        label: 'Asia/Kuala_Lumpur (MYT, UTC+8)' },
+    { value: 'Asia/Singapore',           label: 'Asia/Singapore (SGT, UTC+8)' },
+    { value: 'Asia/Manila',              label: 'Asia/Manila (PST, UTC+8)' },
+    { value: 'Asia/Shanghai',            label: 'Asia/Shanghai (CST, UTC+8)' },
+    { value: 'Asia/Hong_Kong',           label: 'Asia/Hong_Kong (HKT, UTC+8)' },
+    { value: 'Asia/Taipei',              label: 'Asia/Taipei (CST, UTC+8)' },
+    { value: 'Asia/Tokyo',               label: 'Asia/Tokyo (JST, UTC+9)' },
+    { value: 'Asia/Seoul',               label: 'Asia/Seoul (KST, UTC+9)' },
+    // Pacific / Oceania
+    { value: 'Australia/Sydney',         label: 'Australia/Sydney (AEST/AEDT, UTC+10/11)' },
+    { value: 'Australia/Melbourne',      label: 'Australia/Melbourne (AEST/AEDT, UTC+10/11)' },
+    { value: 'Australia/Brisbane',       label: 'Australia/Brisbane (AEST, UTC+10)' },
+    { value: 'Australia/Perth',          label: 'Australia/Perth (AWST, UTC+8)' },
+    { value: 'Pacific/Auckland',         label: 'Pacific/Auckland (NZST/NZDT, UTC+12/13)' },
+    { value: 'Pacific/Honolulu',         label: 'Pacific/Honolulu (HST, UTC-10)' },
+  ]
+
+  const filteredTz = tzSearch.trim()
+    ? TIMEZONES.filter(tz =>
+        tz.label.toLowerCase().includes(tzSearch.toLowerCase()) ||
+        tz.value.toLowerCase().includes(tzSearch.toLowerCase())
+      )
+    : TIMEZONES
+
+  const handleTimezoneChange = async (newTz: string) => {
+    setTzSaving(true)
+    try {
+      await updateTimezone(newTz)
+      showToast('Timezone updated.')
+    } catch {
+      showToast('Failed to update timezone.')
+    } finally {
+      setTzSaving(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg">
       {/* Topbar */}
@@ -204,6 +288,71 @@ export function SettingsPage() {
                 Light
               </button>
             </div>
+          </div>
+        </section>
+
+        {/* Timezone */}
+        <section>
+          <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">
+            Timezone
+          </h2>
+          <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <Clock size={16} className="text-accent mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-text">Calendar date timezone</p>
+                <p className="text-xs text-muted mt-0.5">
+                  Used to stamp goal and milestone completions on the correct calendar day.
+                  {user?.timezone
+                    ? <> Currently set to <span className="text-accent font-mono">{user.timezone}</span>.</>
+                    : <> Not set yet — will be auto-detected on next page load.</>
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Search */}
+            <input
+              type="text"
+              value={tzSearch}
+              onChange={e => setTzSearch(e.target.value)}
+              placeholder="Search timezone or city..."
+              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:border-accent/40 font-mono"
+            />
+
+            {/* Timezone list */}
+            <div className="border border-border rounded-lg overflow-hidden max-h-52 overflow-y-auto">
+              {filteredTz.length === 0 ? (
+                <p className="text-center text-xs text-muted py-6">No timezones match your search.</p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {filteredTz.map(tz => (
+                    <button
+                      key={tz.value}
+                      onClick={() => handleTimezoneChange(tz.value)}
+                      disabled={tzSaving}
+                      className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between gap-2 ${
+                        user?.timezone === tz.value
+                          ? 'bg-accent/10 text-accent font-medium'
+                          : 'text-secondary hover:bg-surface hover:text-primary'
+                      }`}
+                    >
+                      <span className="font-mono text-xs">{tz.value}</span>
+                      <span className="text-xs text-muted truncate text-right flex-1">
+                        {tz.label.split(' — ')[1] ?? tz.label.split(' (')[1]?.replace(')', '') ?? ''}
+                      </span>
+                      {user?.timezone === tz.value && (
+                        <span className="text-accent text-xs shrink-0">✓ Active</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {tzSaving && (
+              <p className="text-xs text-muted font-mono animate-pulse">Saving...</p>
+            )}
           </div>
         </section>
 

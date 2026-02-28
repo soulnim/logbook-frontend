@@ -105,13 +105,18 @@ export function Navbar({ searchQuery = '', onSearchChange, showSearch = true }: 
         <div className="hidden md:flex items-center gap-2 shrink-0">
           {user && (
             <>
-              {user.avatarUrl && (
+              {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
                   alt={user.name}
+                  referrerPolicy="no-referrer"
                   className="w-7 h-7 rounded-full border border-border"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
                 />
-              )}
+              ) : null}
+              <div className={`w-7 h-7 rounded-full border border-border bg-card flex items-center justify-center text-xs font-mono text-accent ${user.avatarUrl ? 'hidden' : ''}`}>
+                {user.name.charAt(0).toUpperCase()}
+              </div>
               <span className="text-sm text-secondary font-body hidden sm:block">
                 {user.name.split(' ')[0]}
               </span>
@@ -209,13 +214,18 @@ export function Navbar({ searchQuery = '', onSearchChange, showSearch = true }: 
                 {/* User info */}
                 {user && (
                   <div className="flex items-center gap-3 px-3 py-2">
-                    {user.avatarUrl && (
+                    {user.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
                         alt={user.name}
+                        referrerPolicy="no-referrer"
                         className="w-8 h-8 rounded-full border border-border"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
                       />
-                    )}
+                    ) : null}
+                    <div className={`w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-xs font-mono text-accent ${user.avatarUrl ? 'hidden' : ''}`}>
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
                     <div className="flex flex-col">
                       <span className="text-sm text-primary font-medium">{user.name}</span>
                       <span className="text-xs text-muted">{user.email}</span>

@@ -11,6 +11,7 @@ interface AuthState {
 
   setToken: (token: string) => void
   loadUser: () => Promise<void>
+  updateTimezone: (timezone: string) => Promise<void>
   logout: () => void
 }
 
@@ -28,7 +29,6 @@ const loadPreviousUsers = (): User[] => {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: localStorage.getItem('logbook_token'),
-  // Start in a loading state so refresh waits for loadUser()
   isLoading: true,
   isAuthenticated: false,
   previousUsers: loadPreviousUsers(),
@@ -45,6 +45,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true })
     try {
       const user = await authApi.getMe()
+
+      // ── First-login timezone detection ────────────────────────────────────
+      // If the user has no timezone saved yet, detect it from the browser and
+      // save it once. We never overwrite it automatically after this point —
+      // the user owns it from here on.
+      if (!user.timezone) {
+        try {
+          const detected = Intl.DateTimeFormat().resolvedOptions().timeZone
+          if (detected) {
+            await authApi.updateTimezone(detected)
+            user.timezone = detected
+          }
+        } catch {
+          // Silently ignore — backend falls back to UTC
+        }
+      }
 
       // Track previously signed-in users for quick sign-in UI
       const existing = get().previousUsers
@@ -65,6 +81,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       localStorage.removeItem('logbook_token')
       set({ user: null, token: null, isAuthenticated: false, isLoading: false })
+    }
+  },
+
+  /**
+   * Called from the Settings page when the user manually changes their timezone.
+   * Saves to backend and updates the local user object immediately.
+   */
+  updateTimezone: async (timezone: string) => {
+    await authApi.updateTimezone(timezone)
+    set(state => ({
+      user: state.user ? { ...state.user, timezone } : null,
+    }))
+    // Keep previousUsers in sync too
+    const { user, previousUsers } = get()
+    if (user) {
+      const updated = previousUsers.map(u => u.id === user.id ? { ...u, timezone } : u)
+      localStorage.setItem('logbook_users', JSON.stringify(updated))
+      set({ previousUsers: updated })
     }
   },
 

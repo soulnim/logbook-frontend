@@ -194,6 +194,7 @@ export interface User {
   email: string
   name: string
   avatarUrl: string
+  timezone: string   // IANA timezone e.g. "Asia/Kuala_Lumpur". Empty string = not yet set
   createdAt: string
 }
 
