@@ -6,6 +6,7 @@ export type InsightType =
   | 'PRODUCTIVITY_CHECK'
   | 'COMMIT_DIGEST'
   | 'MOTIVATE_ME'
+  | 'GOALS_CHECK'
 
 export interface InsightRequest {
   insightType: InsightType

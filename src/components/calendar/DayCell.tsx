@@ -8,18 +8,18 @@ interface DayCellProps {
   currentMonth: Date
   entries: Entry[]
   isSelected: boolean
+  hasMilestone: boolean   // ← new: a milestone was completed on this day
   onClick: () => void
 }
 
 const TYPE_ORDER = ['NOTE', 'SKILL', 'ACTION', 'EVENT', 'COMMIT'] as const
 
-export function DayCell({ date, currentMonth, entries, isSelected, onClick }: DayCellProps) {
+export function DayCell({ date, currentMonth, entries, isSelected, hasMilestone, onClick }: DayCellProps) {
   const isCurrentMonth = isSameMonth(date, currentMonth)
   const isTodayDate    = isToday(date)
   const key            = toDateKey(date)
   const hasEntries     = entries.length > 0
 
-  // Count by type for the dots
   const typeCounts = TYPE_ORDER.filter(t => entries.some(e => e.entryType === t))
 
   return (
@@ -37,7 +37,7 @@ export function DayCell({ date, currentMonth, entries, isSelected, onClick }: Da
         ${isCurrentMonth ? 'cursor-pointer' : 'cursor-default'}
       `}
     >
-      {/* Day number */}
+      {/* Day number row */}
       <div className="flex items-center justify-between mb-1">
         <span
           className={`
@@ -55,11 +55,23 @@ export function DayCell({ date, currentMonth, entries, isSelected, onClick }: Da
           {formatDay(date)}
         </span>
 
-        {hasEntries && (
-          <span className="text-xs font-mono text-muted opacity-0 group-hover:opacity-100 transition-opacity">
-            {entries.length}
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {/* ⭐ milestone indicator */}
+          {hasMilestone && (
+            <span
+              className="text-[10px] leading-none"
+              title="Milestone completed"
+            >
+              ⭐
+            </span>
+          )}
+
+          {hasEntries && (
+            <span className="text-xs font-mono text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+              {entries.length}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Entry type dots */}
@@ -76,7 +88,7 @@ export function DayCell({ date, currentMonth, entries, isSelected, onClick }: Da
         </div>
       )}
 
-      {/* Preview of first entry title on hover */}
+      {/* First entry preview on hover */}
       {entries[0] && (
         <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <p className="text-xs text-secondary truncate leading-tight">

@@ -7,6 +7,7 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { SettingsPage }     from './pages/SettingsPage'
 import { EntriesPage }      from './pages/EntriesPage'
 import { StatsPage }        from './pages/StatsPage'
+import { GoalsPage }        from './pages/GoalsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/"               element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/entries"        element={<ProtectedRoute><EntriesPage /></ProtectedRoute>} />
         <Route path="/stats"          element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
+        <Route path="/goals"          element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />
         <Route path="/settings"       element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="*"               element={<Navigate to="/" replace />} />
       </Routes>

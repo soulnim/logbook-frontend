@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEntryStore } from '../../store/entryStore'
 import { DayCell } from './DayCell'
 import { getCalendarDays, formatMonthYear, toDateKey, DAY_NAMES, subMonths, addMonths } from '../../utils/dateUtils'
-import { format } from 'date-fns'
+import { goalsApi } from '../../api/goals'
 
 export function MonthCalendar() {
   const {
@@ -10,11 +11,40 @@ export function MonthCalendar() {
     setCurrentMonth, selectDate,
   } = useEntryStore()
 
+  // Set of "YYYY-MM-DD" dates where a milestone was completed
+  const [milestoneDates, setMilestoneDates] = useState<Set<string>>(new Set())
+
   const calendarDays = getCalendarDays(currentMonth)
 
-  const goToPrev = () => setCurrentMonth(subMonths(currentMonth, 1))
-  const goToNext = () => setCurrentMonth(addMonths(currentMonth, 1))
+  const goToPrev  = () => setCurrentMonth(subMonths(currentMonth, 1))
+  const goToNext  = () => setCurrentMonth(addMonths(currentMonth, 1))
   const goToToday = () => setCurrentMonth(new Date())
+
+  // Fetch all active + completed goals and collect milestone completion dates
+  // Re-runs whenever the visible month changes
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const goals = await goalsApi.getAll()
+        const dates = new Set<string>()
+
+        goals.forEach(goal => {
+          goal.milestones.forEach(m => {
+            if (m.isCompleted && m.completedAt) {
+              // completedAt is an ISO string — take just the date part
+              const dateStr = m.completedAt.substring(0, 10)
+              dates.add(dateStr)
+            }
+          })
+        })
+
+        setMilestoneDates(dates)
+      } catch {
+        // Silently ignore — milestone stars are non-critical
+      }
+    }
+    load()
+  }, [currentMonth])
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -68,6 +98,7 @@ export function MonthCalendar() {
               currentMonth={currentMonth}
               entries={entriesByDate[key] || []}
               isSelected={selectedDate ? toDateKey(selectedDate) === key : false}
+              hasMilestone={milestoneDates.has(key)}
               onClick={() => selectDate(date)}
             />
           )

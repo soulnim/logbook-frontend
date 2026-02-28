@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   BookOpen, Search, Settings, LogOut, X,
-  CalendarDays, List, BarChart2, Menu, Sun, Moon,
+  CalendarDays, List, BarChart2, Menu, Sun, Moon, Target,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useThemeStore } from '../../store/themeStore'
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { path: '/',        label: 'Calendar', icon: CalendarDays },
   { path: '/entries', label: 'Entries',  icon: List         },
   { path: '/stats',   label: 'Stats',    icon: BarChart2    },
+  { path: '/goals',   label: 'Goals',    icon: Target       },
 ]
 
 export function Navbar({ searchQuery = '', onSearchChange, showSearch = true }: NavbarProps) {
