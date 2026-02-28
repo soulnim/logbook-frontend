@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import {
   Plus, Target, CheckCircle2, Circle, Trash2, Edit3,
@@ -525,6 +525,7 @@ export function GoalsPage() {
   const [activeTab,    setActiveTab]    = useState<GoalStatus | 'ALL'>('ACTIVE')
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [searchQuery,  setSearchQuery]  = useState('')
 
   const loadGoals = useCallback(async () => {
     setIsLoading(true)
@@ -539,6 +540,18 @@ export function GoalsPage() {
   }, [activeTab])
 
   useEffect(() => { loadGoals() }, [loadGoals])
+
+  // ── Filter goals based on search query ──
+  const filteredGoals = useMemo(() => {
+    if (!searchQuery.trim()) return goals
+
+    const query = searchQuery.toLowerCase()
+    return goals.filter(goal =>
+      goal.title.toLowerCase().includes(query) ||
+      goal.description?.toLowerCase().includes(query) ||
+      goal.milestones.some(m => m.title.toLowerCase().includes(query))
+    )
+  }, [goals, searchQuery])
 
   const handleGoalUpdated = (updated: Goal) => {
     setGoals(prev => prev.map(g => g.id === updated.id ? updated : g))
@@ -566,7 +579,7 @@ export function GoalsPage() {
       <div className="fixed inset-0 pointer-events-none opacity-[0.025]"
         style={{ backgroundImage: `linear-gradient(#818cf8 1px, transparent 1px), linear-gradient(90deg, #818cf8 1px, transparent 1px)`, backgroundSize: '48px 48px' }} />
 
-      <Navbar showSearch={false} />
+      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} showSearch={true} />
 
       <main className="relative z-0 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-6">
 
@@ -577,7 +590,14 @@ export function GoalsPage() {
               <Target size={18} className="text-accent" />
               <h1 className="text-2xl font-display font-semibold text-primary tracking-tight">Goals</h1>
             </div>
-            <p className="text-sm text-secondary font-body">Track what you're working towards</p>
+            <p className="text-sm text-secondary font-body">
+              Track what you're working towards
+              {searchQuery && (
+                <span className="ml-2 text-accent">
+                  · {filteredGoals.length} result{filteredGoals.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -630,18 +650,23 @@ export function GoalsPage() {
           <div className="flex items-center justify-center py-20">
             <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
           </div>
-        ) : goals.length === 0 ? (
+        ) : filteredGoals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-full bg-card border border-border flex items-center justify-center mb-4">
               <Target size={24} className="text-muted" />
             </div>
             <p className="text-secondary font-body mb-1">
-              {activeTab === 'ALL' ? 'No goals yet' : `No ${activeTab.toLowerCase()} goals`}
+              {searchQuery
+                ? `No goals found for "${searchQuery}"`
+                : activeTab === 'ALL'
+                  ? 'No goals yet'
+                  : `No ${activeTab.toLowerCase()} goals`
+              }
             </p>
             <p className="text-xs text-muted font-body mb-4">
-              {activeTab === 'ACTIVE' || activeTab === 'ALL' ? 'Create your first goal to start tracking progress' : ''}
+              {!searchQuery && (activeTab === 'ACTIVE' || activeTab === 'ALL') ? 'Create your first goal to start tracking progress' : ''}
             </p>
-            {(activeTab === 'ACTIVE' || activeTab === 'ALL') && (
+            {!searchQuery && (activeTab === 'ACTIVE' || activeTab === 'ALL') && (
               <button
                 onClick={() => setShowAddModal(true)}
                 className="flex items-center gap-2 text-accent hover:text-accent/80 text-sm font-mono transition-colors"
@@ -652,7 +677,7 @@ export function GoalsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {goals.map(goal => (
+            {filteredGoals.map(goal => (
               <GoalCard
                 key={goal.id}
                 goal={goal}
