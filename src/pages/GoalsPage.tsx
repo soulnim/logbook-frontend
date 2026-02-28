@@ -541,18 +541,6 @@ export function GoalsPage() {
 
   useEffect(() => { loadGoals() }, [loadGoals])
 
-  // ── Filter goals based on search query ──
-  const filteredGoals = useMemo(() => {
-    if (!searchQuery.trim()) return goals
-
-    const query = searchQuery.toLowerCase()
-    return goals.filter(goal =>
-      goal.title.toLowerCase().includes(query) ||
-      goal.description?.toLowerCase().includes(query) ||
-      goal.milestones.some(m => m.title.toLowerCase().includes(query))
-    )
-  }, [goals, searchQuery])
-
   const handleGoalUpdated = (updated: Goal) => {
     setGoals(prev => prev.map(g => g.id === updated.id ? updated : g))
     setSelectedGoal(updated)
@@ -574,12 +562,22 @@ export function GoalsPage() {
   const overdueCount   = goals.filter(g => g.overdue).length
   const completedCount = goals.filter(g => g.status === 'COMPLETED').length
 
+  const filteredGoals = useMemo(() => {
+    if (!searchQuery.trim()) return goals
+    const q = searchQuery.toLowerCase()
+    return goals.filter(g =>
+      g.title.toLowerCase().includes(q) ||
+      g.description?.toLowerCase().includes(q) ||
+      g.milestones.some(m => m.title.toLowerCase().includes(q))
+    )
+  }, [goals, searchQuery])
+
   return (
     <div className="min-h-screen bg-bg text-primary flex flex-col font-body">
       <div className="fixed inset-0 pointer-events-none opacity-[0.025]"
         style={{ backgroundImage: `linear-gradient(#818cf8 1px, transparent 1px), linear-gradient(90deg, #818cf8 1px, transparent 1px)`, backgroundSize: '48px 48px' }} />
 
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} showSearch={true} />
+      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <main className="relative z-0 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-6">
 
@@ -593,7 +591,7 @@ export function GoalsPage() {
             <p className="text-sm text-secondary font-body">
               Track what you're working towards
               {searchQuery && (
-                <span className="ml-2 text-accent">
+                <span className="ml-2 text-accent font-mono">
                   · {filteredGoals.length} result{filteredGoals.length !== 1 ? 's' : ''}
                 </span>
               )}
@@ -658,9 +656,7 @@ export function GoalsPage() {
             <p className="text-secondary font-body mb-1">
               {searchQuery
                 ? `No goals found for "${searchQuery}"`
-                : activeTab === 'ALL'
-                  ? 'No goals yet'
-                  : `No ${activeTab.toLowerCase()} goals`
+                : activeTab === 'ALL' ? 'No goals yet' : `No ${activeTab.toLowerCase()} goals`
               }
             </p>
             <p className="text-xs text-muted font-body mb-4">
