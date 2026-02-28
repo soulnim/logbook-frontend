@@ -112,6 +112,79 @@ export interface StatsData {
   recentEntries: Entry[]
 }
 
+// ── Goals & Milestones ────────────────────────────────────────────────────────
+
+export type GoalType   = 'PERSONAL' | 'PROJECT' | 'LEARNING' | 'HABIT' | 'OTHER'
+export type GoalStatus = 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
+
+export interface Milestone {
+  id: number
+  title: string
+  isCompleted: boolean
+  completedAt: string | null
+  displayOrder: number
+  createdAt: string
+}
+
+export interface Goal {
+  id: number
+  title: string
+  description: string | null
+  type: GoalType
+  status: GoalStatus
+  color: string
+  targetDate: string | null   // "YYYY-MM-DD"
+  milestones: Milestone[]
+  totalMilestones: number
+  completedMilestones: number
+  progressPercent: number     // 0-100
+  overdue: boolean
+  daysUntilDeadline: number   // negative = overdue, MAX_VALUE = no deadline
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateGoalRequest {
+  title: string
+  description?: string
+  type: GoalType
+  color?: string
+  targetDate?: string
+}
+
+export interface UpdateGoalRequest {
+  title?: string
+  description?: string
+  type?: GoalType
+  color?: string
+  targetDate?: string
+}
+
+export interface CreateMilestoneRequest {
+  title: string
+  displayOrder?: number
+}
+
+export interface UpdateMilestoneRequest {
+  title?: string
+  isCompleted?: boolean
+  displayOrder?: number
+}
+
+export interface GoalSummary {
+  activeCount: number
+  completedCount: number
+  overdueCount: number
+}
+
+export const GOAL_TYPE_META: Record<GoalType, { label: string; icon: string; color: string }> = {
+  PERSONAL: { label: 'Personal', icon: '🌱', color: '#34d399' },
+  PROJECT:  { label: 'Project',  icon: '🚀', color: '#818cf8' },
+  LEARNING: { label: 'Learning', icon: '🧠', color: '#38bdf8' },
+  HABIT:    { label: 'Habit',    icon: '🔄', color: '#f59e0b' },
+  OTHER:    { label: 'Other',    icon: '📌', color: '#94a3b8' },
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export interface User {
