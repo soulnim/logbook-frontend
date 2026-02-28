@@ -1,6 +1,6 @@
 // ── Entry Types ───────────────────────────────────────────────────────────────
 
-export type EntryType = 'NOTE' | 'SKILL' | 'ACTION' | 'EVENT' | 'COMMIT'
+export type EntryType = 'NOTE' | 'SKILL' | 'ACTION' | 'EVENT' | 'COMMIT' | 'GOAL'
 
 export interface Tag {
   id: number
@@ -20,6 +20,8 @@ export interface Entry {
   mood: number | null     // 1-5
   tags: Tag[]
   sourceMeta: string | null  // JSON string for COMMIT entries
+  goalReferenceId?: number | null    // Present on GOAL entries — links back to the source goal
+  milestoneReferenceId?: number | null // Present on GOAL entries — null means whole-goal completion
   createdAt: string
   updatedAt: string
 }
@@ -203,6 +205,7 @@ export const ENTRY_TYPE_META: Record<EntryType, { label: string; color: string; 
   ACTION: { label: 'Action', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: '⚡' },
   EVENT:  { label: 'Event',  color: '#f472b6', bg: 'rgba(244,114,182,0.12)', icon: '📅' },
   COMMIT: { label: 'Commit', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '🔀' },
+  GOAL:   { label: 'Goal',   color: '#10b981', bg: 'rgba(16,185,129,0.12)',  icon: '🎯' },
 }
 
 export const MOOD_LABELS: Record<number, string> = {

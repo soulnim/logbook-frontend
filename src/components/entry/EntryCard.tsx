@@ -73,6 +73,7 @@ export function EntryCard({ entry, onEdit }: EntryCardProps) {
   const { removeEntry, updateEntry } = useEntryStore()
   const meta = ENTRY_TYPE_META[entry.entryType]
   const sourceMeta = parseSourceMeta(entry.sourceMeta)
+  const isGoalEntry = entry.entryType === 'GOAL'
 
   const handleDelete = async () => {
     if (!confirm('Delete this entry?')) return
@@ -91,6 +92,53 @@ export function EntryCard({ entry, onEdit }: EntryCardProps) {
     updateEntry(updated)
   }
 
+  // ── GOAL entries: read-only, auto-tracked ─────────────────────────────────
+  if (isGoalEntry) {
+    return (
+      <div
+        className="group relative rounded-lg border border-border bg-card p-4 transition-all duration-150 animate-fade-in opacity-90"
+        style={{ borderLeft: `3px solid ${meta.color}` }}
+      >
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span
+              className="text-xs font-mono px-1.5 py-0.5 rounded shrink-0"
+              style={{ color: meta.color, backgroundColor: meta.bg }}
+            >
+              {meta.icon} {meta.label}
+            </span>
+            <span className="text-[10px] font-mono text-emerald-400 shrink-0">
+              Auto-tracked
+            </span>
+          </div>
+
+          {entry.isCompleted && (
+            <span className="text-emerald-400 shrink-0 text-sm">✓</span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h4 className="text-sm font-body font-medium text-primary mb-1">
+          {entry.title}
+        </h4>
+
+        {/* Content */}
+        {entry.content && (
+          <p className="text-xs text-secondary font-body leading-relaxed mb-2 line-clamp-2">
+            {entry.content}
+          </p>
+        )}
+
+        {/* Read-only notice */}
+        <p className="text-[9px] text-muted font-mono mt-2">
+          Automatically created when you completed a goal milestone. Edit from the Goals page.
+        </p>
+      </div>
+    )
+  }
+
+  // ── Regular entries ───────────────────────────────────────────────────────
   return (
     <div
       className="group relative rounded-lg border border-border bg-card p-4 transition-all duration-150 hover:border-accent/20 animate-fade-in"
