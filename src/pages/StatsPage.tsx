@@ -1,117 +1,85 @@
 import { useState, useEffect, useMemo } from 'react'
-import { format, parseISO, subDays, getDay, startOfWeek, addDays } from 'date-fns'
-import { BarChart2, Flame, CalendarDays, TrendingUp, Sparkles, BookOpen, Zap, Brain, GitCommit, Star } from 'lucide-react'
+import { format, parseISO, subDays, getDay } from 'date-fns'
+import {
+  BarChart2, Flame, CalendarDays, TrendingUp, Sparkles,
+  BookOpen, Zap, Brain, GitCommit, Star, Send, RefreshCw,
+} from 'lucide-react'
 import { statsApi } from '../api/stats'
+import { aiApi, type InsightType, type InsightResponse } from '../api/ai'
 import { Navbar } from '../components/layout/Navbar'
 import { EntryCard } from '../components/entry/EntryCard'
 import { useEntryStore } from '../store/entryStore'
 import type { StatsData, HeatmapData, EntryType } from '../types'
 import { ENTRY_TYPE_META } from '../types'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Insight type config ───────────────────────────────────────────────────────
 
-const TYPE_ICONS: Record<EntryType, React.ElementType> = {
-  NOTE:   BookOpen,
-  SKILL:  Brain,
-  ACTION: Zap,
-  EVENT:  CalendarDays,
-  COMMIT: GitCommit,
+const INSIGHT_OPTIONS: {
+  type: InsightType
+  label: string
+  emoji: string
+  description: string
+  period: string
+}[] = [
+  { type: 'WEEKLY_SUMMARY',    label: 'Weekly summary',    emoji: '📋', description: 'What did I do this week?',       period: '7 days'  },
+  { type: 'LEARNING_PATTERNS', label: 'What am I learning?', emoji: '🧠', description: 'Patterns from my skill entries', period: '30 days' },
+  { type: 'PRODUCTIVITY_CHECK',label: 'Productivity check', emoji: '⚡', description: 'How are my tasks going?',        period: '30 days' },
+  { type: 'COMMIT_DIGEST',     label: 'Commit digest',     emoji: '🔀', description: 'Summarise my GitHub commits',    period: '7 days'  },
+  { type: 'MOTIVATE_ME',       label: 'Motivate me',       emoji: '💬', description: 'Encouragement from my progress', period: '7 days'  },
+]
+
+// ── Mini chart components ─────────────────────────────────────────────────────
+
+const TYPE_ICONS: Record<string, React.ElementType> = {
+  NOTE: BookOpen, SKILL: Brain, ACTION: Zap, EVENT: CalendarDays, COMMIT: GitCommit,
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-// Build last-8-weeks bar chart data from heatmap entries
 function buildWeeklyBars(data: HeatmapData['data']) {
   const today = new Date()
-  const weeks: { label: string; count: number }[] = []
-
-  for (let w = 7; w >= 0; w--) {
-    const weekEnd   = subDays(today, w * 7)
+  return Array.from({ length: 8 }, (_, i) => {
+    const weekEnd   = subDays(today, (7 - i) * 7)
     const weekStart = subDays(weekEnd, 6)
-    const label     = format(weekStart, 'MMM d')
-
-    const count = data.filter(d => {
-      const date = parseISO(d.date)
-      return date >= weekStart && date <= weekEnd
-    }).reduce((sum, d) => sum + d.count, 0)
-
-    weeks.push({ label, count })
-  }
-  return weeks
+    const count = data
+      .filter(d => { const date = parseISO(d.date); return date >= weekStart && date <= weekEnd })
+      .reduce((s, d) => s + d.count, 0)
+    return { label: format(weekStart, 'MMM d'), count }
+  })
 }
 
-// Build day-of-week heatmap
-function buildDayOfWeekCounts(data: HeatmapData['data']) {
+function buildDowCounts(data: HeatmapData['data']) {
   const counts = [0, 0, 0, 0, 0, 0, 0]
-  data.forEach(d => {
-    const dow = getDay(parseISO(d.date))
-    counts[dow] += d.count
-  })
+  data.forEach(d => { counts[getDay(parseISO(d.date))] += d.count })
   return counts
 }
 
-// SVG Donut chart
-function DonutChart({ segments }: { segments: { color: string; value: number; label: string }[] }) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0)
-  if (total === 0) return <div className="w-32 h-32 rounded-full bg-surface border border-border" />
-
-  const radius = 40
-  const cx = 50
-  const cy = 50
-  const circumference = 2 * Math.PI * radius
-
+function DonutChart({ segments }: { segments: { color: string; value: number }[] }) {
+  const total = segments.reduce((s, x) => s + x.value, 0)
+  if (total === 0) return <div className="w-28 h-28 rounded-full bg-surface border border-border" />
+  const r = 40, cx = 50, cy = 50, circ = 2 * Math.PI * r
   let offset = 0
-  const slices = segments.map(seg => {
-    const pct   = seg.value / total
-    const dash  = pct * circumference
-    const slice = { ...seg, dash, gap: circumference - dash, offset }
+  const slices = segments.map(s => {
+    const dash = (s.value / total) * circ
+    const slice = { ...s, dash, gap: circ - dash, offset }
     offset += dash
     return slice
   })
-
   return (
-    <svg viewBox="0 0 100 100" className="w-32 h-32 -rotate-90">
+    <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
       {slices.map((s, i) => (
-        <circle
-          key={i}
-          cx={cx} cy={cy} r={radius}
-          fill="none"
-          stroke={s.color}
-          strokeWidth="16"
-          strokeDasharray={`${s.dash} ${s.gap}`}
-          strokeDashoffset={-s.offset}
-          className="transition-all duration-500"
-        />
+        <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth="16"
+          strokeDasharray={`${s.dash} ${s.gap}`} strokeDashoffset={-s.offset}
+          className="transition-all duration-500" />
       ))}
-      {/* Inner circle */}
       <circle cx={cx} cy={cy} r="32" className="fill-card" />
     </svg>
   )
 }
 
-// Bar chart (weekly activity)
-function BarChart({ bars, maxVal }: { bars: { label: string; count: number }[]; maxVal: number }) {
-  return (
-    <div className="flex items-end gap-1.5 h-28">
-      {bars.map((bar, i) => {
-        const pct = maxVal > 0 ? (bar.count / maxVal) * 100 : 0
-        const isRecent = i === bars.length - 1
-        return (
-          <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <span className="text-[9px] font-mono text-muted">{bar.count > 0 ? bar.count : ''}</span>
-            <div className="w-full rounded-t-sm transition-all duration-500 relative"
-              style={{ height: `${Math.max(pct, bar.count > 0 ? 4 : 2)}%`, backgroundColor: isRecent ? 'var(--color-accent)' : 'rgba(129,140,248,0.3)' }}
-            />
-            <span className="text-[9px] font-mono text-muted truncate w-full text-center hidden sm:block">{bar.label.split(' ')[0]}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// Stat card
-function StatCard({ label, value, sub, icon: Icon, color }: { label: string; value: string | number; sub?: string; icon: React.ElementType; color: string }) {
+function StatCard({ label, value, sub, icon: Icon, color }: {
+  label: string; value: string | number; sub?: string; icon: React.ElementType; color: string
+}) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20` }}>
@@ -126,57 +94,180 @@ function StatCard({ label, value, sub, icon: Icon, color }: { label: string; val
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── AI Insights panel ─────────────────────────────────────────────────────────
+
+function AiInsightsPanel() {
+  const [selected,   setSelected]   = useState<InsightType | null>(null)
+  const [focusNote,  setFocusNote]  = useState('')
+  const [isLoading,  setIsLoading]  = useState(false)
+  const [result,     setResult]     = useState<InsightResponse | null>(null)
+  const [error,      setError]      = useState('')
+
+  const handleGenerate = async () => {
+    if (!selected) return
+    setIsLoading(true)
+    setResult(null)
+    setError('')
+    try {
+      const res = await aiApi.getInsight({
+        insightType: selected,
+        focusNote:   focusNote.trim() || undefined,
+      })
+      setResult(res)
+    } catch {
+      setError('Could not reach the AI. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleReset = () => {
+    setResult(null)
+    setError('')
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-[0.04] pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #818cf8, transparent)', transform: 'translate(40%, -40%)' }} />
+
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles size={15} className="text-accent" />
+        <h2 className="text-xs font-mono text-muted uppercase tracking-widest">AI Insights</h2>
+        <div className="flex items-center gap-1.5 ml-auto text-[10px] font-mono text-muted/60">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          Llama 3.1 · Groq
+        </div>
+      </div>
+
+      {/* Result view */}
+      {result ? (
+        <div className="animate-fade-in">
+          {/* Result header */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <p className="text-xs font-mono text-muted">
+                {INSIGHT_OPTIONS.find(o => o.type === result.insightType)?.emoji}{' '}
+                {INSIGHT_OPTIONS.find(o => o.type === result.insightType)?.label}
+              </p>
+              {result.hasData && (
+                <p className="text-[10px] text-muted/60 font-mono mt-0.5">
+                  Based on {result.entryCount} entr{result.entryCount === 1 ? 'y' : 'ies'} · {result.dateRange}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1 text-xs text-muted hover:text-secondary font-mono transition-colors shrink-0"
+            >
+              <RefreshCw size={11} /> New insight
+            </button>
+          </div>
+
+          {/* Insight text */}
+          <div className="bg-surface rounded-xl p-4 border border-border/60">
+            <p className="text-sm text-primary font-body leading-relaxed whitespace-pre-wrap">
+              {result.insight}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Insight type picker */}
+          <p className="text-xs text-muted font-body mb-3">Choose what you'd like to explore:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-4">
+            {INSIGHT_OPTIONS.map(opt => (
+              <button
+                key={opt.type}
+                onClick={() => { setSelected(opt.type); setError('') }}
+                className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all duration-150 ${
+                  selected === opt.type
+                    ? 'border-accent bg-accent/10'
+                    : 'border-border hover:border-accent/40 hover:bg-surface'
+                }`}
+              >
+                <span className="text-base leading-none mt-0.5">{opt.emoji}</span>
+                <div className="min-w-0">
+                  <p className="text-xs font-mono text-primary font-medium">{opt.label}</p>
+                  <p className="text-[10px] text-muted mt-0.5 leading-relaxed">{opt.description}</p>
+                  <p className="text-[10px] text-muted/50 font-mono mt-1">↳ last {opt.period}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Optional focus note */}
+          <div className="mb-4">
+            <label className="text-[10px] font-mono text-muted uppercase tracking-widest block mb-1.5">
+              Focus (optional)
+            </label>
+            <input
+              value={focusNote}
+              onChange={e => setFocusNote(e.target.value)}
+              maxLength={120}
+              placeholder="e.g. focus on my backend work, or my consistency this week..."
+              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-primary font-body placeholder:text-muted/50 focus:outline-none focus:border-accent/40 transition-colors"
+            />
+            <p className="text-[10px] text-muted/40 font-mono mt-1 text-right">{focusNote.length}/120</p>
+          </div>
+
+          {/* Error */}
+          {error && <p className="text-xs text-red-400 font-mono mb-3">{error}</p>}
+
+          {/* Generate button */}
+          <button
+            onClick={handleGenerate}
+            disabled={!selected || isLoading}
+            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2.5 text-sm font-mono transition-colors"
+          >
+            {isLoading ? (
+              <>
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                Thinking...
+              </>
+            ) : (
+              <>
+                <Send size={13} />
+                Generate insight
+              </>
+            )}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Main StatsPage ────────────────────────────────────────────────────────────
 
 export function StatsPage() {
   const { selectDate } = useEntryStore()
-  const [stats,        setStats]        = useState<StatsData | null>(null)
-  const [heatmap,      setHeatmap]      = useState<HeatmapData | null>(null)
-  const [isLoading,    setIsLoading]    = useState(true)
+  const [stats,     setStats]     = useState<StatsData | null>(null)
+  const [heatmap,   setHeatmap]   = useState<HeatmapData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [s, h] = await Promise.all([statsApi.getStats(), statsApi.getHeatmap()])
-        setStats(s)
-        setHeatmap(h)
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    load()
+    Promise.all([statsApi.getStats(), statsApi.getHeatmap()])
+      .then(([s, h]) => { setStats(s); setHeatmap(h) })
+      .catch(console.error)
+      .finally(() => setIsLoading(false))
   }, [])
-
-  // ── Derived data ──────────────────────────────────────────────────────────
 
   const typeSegments = useMemo(() => {
     if (!stats) return []
     return (Object.entries(stats.byType) as [EntryType, number][])
       .filter(([, v]) => v > 0)
-      .map(([type, value]) => ({
-        color: ENTRY_TYPE_META[type].color,
-        value,
-        label: ENTRY_TYPE_META[type].label,
-        type,
-      }))
+      .map(([type, value]) => ({ color: ENTRY_TYPE_META[type].color, value, type }))
       .sort((a, b) => b.value - a.value)
   }, [stats])
 
   const weeklyBars = useMemo(() => heatmap ? buildWeeklyBars(heatmap.data) : [], [heatmap])
   const maxWeekly  = useMemo(() => Math.max(...weeklyBars.map(b => b.count), 1), [weeklyBars])
-
-  const dowCounts  = useMemo(() => heatmap ? buildDayOfWeekCounts(heatmap.data) : [], [heatmap])
+  const dowCounts  = useMemo(() => heatmap ? buildDowCounts(heatmap.data) : [], [heatmap])
   const maxDow     = useMemo(() => Math.max(...dowCounts, 1), [dowCounts])
-
-  const mostActiveDay = useMemo(() => {
-    if (!dowCounts.length) return null
-    const idx = dowCounts.indexOf(Math.max(...dowCounts))
-    return DAY_LABELS[idx]
-  }, [dowCounts])
-
-  const bestStreak = stats?.longestStreak ?? 0
+  const bestDow    = dowCounts.length ? DAY_LABELS[dowCounts.indexOf(Math.max(...dowCounts))] : null
 
   if (isLoading) {
     return (
@@ -189,25 +280,21 @@ export function StatsPage() {
     )
   }
 
-  const totalEntries  = stats?.totalEntries  ?? 0
-  const activeDays    = stats?.activeDays    ?? 0
-  const currentStreak = stats?.currentStreak ?? 0
+  const total   = stats?.totalEntries  ?? 0
+  const active  = stats?.activeDays    ?? 0
+  const current = stats?.currentStreak ?? 0
+  const longest = stats?.longestStreak ?? 0
 
   return (
     <div className="min-h-screen bg-bg text-primary flex flex-col font-body">
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.025]"
-        style={{
-          backgroundImage: `linear-gradient(#818cf8 1px, transparent 1px), linear-gradient(90deg, #818cf8 1px, transparent 1px)`,
-          backgroundSize: '48px 48px',
-        }}
-      />
+      <div className="fixed inset-0 pointer-events-none opacity-[0.025]"
+        style={{ backgroundImage: `linear-gradient(#818cf8 1px, transparent 1px), linear-gradient(90deg, #818cf8 1px, transparent 1px)`, backgroundSize: '48px 48px' }} />
 
       <Navbar showSearch={false} />
 
       <main className="relative z-0 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col gap-6">
 
-        {/* Page header */}
+        {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-1">
             <BarChart2 size={18} className="text-accent" />
@@ -216,40 +303,41 @@ export function StatsPage() {
           <p className="text-sm text-secondary font-body">A look at your progress over time</p>
         </div>
 
-        {/* ── Stat cards ── */}
+        {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Total entries"   value={totalEntries}                     icon={BookOpen}     color="#818cf8" />
-          <StatCard label="Active days"     value={activeDays}                       icon={CalendarDays} color="#34d399" />
-          <StatCard label="Current streak"  value={`${currentStreak}d`} sub="days in a row" icon={Flame} color="#f59e0b" />
-          <StatCard label="Longest streak"  value={`${bestStreak}d`}    sub="personal best" icon={Star}  color="#f472b6" />
+          <StatCard label="Total entries"  value={total}           icon={BookOpen}     color="#818cf8" />
+          <StatCard label="Active days"    value={active}          icon={CalendarDays} color="#34d399" />
+          <StatCard label="Current streak" value={`${current}d`}  sub="days in a row" icon={Flame}    color="#f59e0b" />
+          <StatCard label="Longest streak" value={`${longest}d`}  sub="personal best" icon={Star}     color="#f472b6" />
         </div>
 
-        {/* ── Middle row: donut + weekly bars ── */}
+        {/* Type breakdown + Weekly bars */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Type breakdown */}
           <div className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">Entries by type</h2>
             {typeSegments.length === 0 ? (
               <p className="text-sm text-muted text-center py-8">No entries yet</p>
             ) : (
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-5">
                 <DonutChart segments={typeSegments} />
                 <div className="flex flex-col gap-2.5 flex-1">
                   {typeSegments.map(seg => {
-                    const total = typeSegments.reduce((s, x) => s + x.value, 0)
-                    const pct   = total > 0 ? Math.round((seg.value / total) * 100) : 0
-                    const Icon  = TYPE_ICONS[seg.type as EntryType]
+                    const tot = typeSegments.reduce((s, x) => s + x.value, 0)
+                    const pct = tot > 0 ? Math.round((seg.value / tot) * 100) : 0
+                    const Icon = TYPE_ICONS[seg.type] ?? BookOpen
                     return (
                       <div key={seg.type} className="flex items-center gap-2">
                         <Icon size={12} style={{ color: seg.color }} />
-                        <span className="text-xs font-mono text-secondary flex-1">{seg.label}</span>
+                        <span className="text-xs font-mono text-secondary flex-1">
+                          {ENTRY_TYPE_META[seg.type as EntryType].label}
+                        </span>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden">
+                          <div className="w-14 h-1.5 bg-surface rounded-full overflow-hidden">
                             <div className="h-full rounded-full transition-all duration-500"
                               style={{ width: `${pct}%`, backgroundColor: seg.color }} />
                           </div>
-                          <span className="text-xs font-mono text-primary w-8 text-right">{seg.value}</span>
+                          <span className="text-xs font-mono text-primary w-6 text-right">{seg.value}</span>
                         </div>
                       </div>
                     )
@@ -259,14 +347,32 @@ export function StatsPage() {
             )}
           </div>
 
-          {/* Weekly activity */}
           <div className="bg-card border border-border rounded-xl p-5">
-            <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">Weekly activity <span className="text-muted/50">(last 8 weeks)</span></h2>
+            <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">
+              Weekly activity <span className="text-muted/50">(last 8 weeks)</span>
+            </h2>
             {weeklyBars.every(b => b.count === 0) ? (
               <p className="text-sm text-muted text-center py-8">No data yet</p>
             ) : (
               <>
-                <BarChart bars={weeklyBars} maxVal={maxWeekly} />
+                <div className="flex items-end gap-1.5 h-28">
+                  {weeklyBars.map((bar, i) => {
+                    const pct = maxWeekly > 0 ? (bar.count / maxWeekly) * 100 : 0
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                        <span className="text-[9px] font-mono text-muted">{bar.count > 0 ? bar.count : ''}</span>
+                        <div className="w-full rounded-t-sm transition-all duration-500"
+                          style={{
+                            height: `${Math.max(pct, bar.count > 0 ? 4 : 2)}%`,
+                            backgroundColor: i === weeklyBars.length - 1 ? 'var(--color-accent)' : 'rgba(129,140,248,0.3)',
+                          }} />
+                        <span className="text-[9px] font-mono text-muted truncate w-full text-center hidden sm:block">
+                          {bar.label.split(' ')[0]}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
                 <p className="text-[10px] text-muted font-mono mt-2 text-right">
                   avg {Math.round(weeklyBars.reduce((s, b) => s + b.count, 0) / 8)} entries/week
                 </p>
@@ -275,24 +381,20 @@ export function StatsPage() {
           </div>
         </div>
 
-        {/* ── Day of week heatmap ── */}
+        {/* Day-of-week heatmap */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">
-            Most active day
-            {mostActiveDay && <span className="ml-2 text-accent">{mostActiveDay}</span>}
+            Most active day {bestDow && <span className="text-accent ml-1">{bestDow}</span>}
           </h2>
-          <div className="flex gap-2 sm:gap-4">
+          <div className="flex gap-2 sm:gap-3">
             {DAY_LABELS.map((day, i) => {
               const count = dowCounts[i] ?? 0
-              const pct   = maxDow > 0 ? count / maxDow : 0
-              const alpha = 0.1 + pct * 0.9
+              const alpha = maxDow > 0 ? 0.1 + (count / maxDow) * 0.9 : 0.1
               return (
                 <div key={day} className="flex flex-col items-center gap-2 flex-1">
-                  <div
-                    className="w-full aspect-square rounded-lg transition-all duration-300 flex items-center justify-center"
-                    style={{ backgroundColor: `rgba(129,140,248,${alpha})` }}
-                  >
-                    <span className="text-[10px] font-mono" style={{ color: pct > 0.5 ? '#fff' : 'var(--color-muted)' }}>
+                  <div className="w-full aspect-square rounded-lg flex items-center justify-center transition-all duration-300"
+                    style={{ backgroundColor: `rgba(129,140,248,${alpha})` }}>
+                    <span className="text-[10px] font-mono" style={{ color: (count / maxDow) > 0.5 ? '#fff' : 'var(--color-muted)' }}>
                       {count > 0 ? count : ''}
                     </span>
                   </div>
@@ -303,30 +405,29 @@ export function StatsPage() {
           </div>
         </div>
 
-        {/* ── Milestones ── */}
-        {totalEntries > 0 && (
+        {/* ── AI Insights ── */}
+        <AiInsightsPanel />
+
+        {/* Milestones */}
+        {total > 0 && (
           <div className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">Milestones</h2>
             <div className="flex flex-wrap gap-2">
               {[
-                { reached: totalEntries >= 1,   label: 'First entry',         icon: '🌱' },
-                { reached: totalEntries >= 10,  label: '10 entries',          icon: '📗' },
-                { reached: totalEntries >= 50,  label: '50 entries',          icon: '🔥' },
-                { reached: totalEntries >= 100, label: '100 entries',         icon: '💎' },
-                { reached: currentStreak >= 3,  label: '3-day streak',        icon: '⚡' },
-                { reached: currentStreak >= 7,  label: 'Week streak',         icon: '🗓️' },
-                { reached: currentStreak >= 30, label: 'Month streak',        icon: '🏆' },
-                { reached: bestStreak >= 7,     label: '7-day best streak',   icon: '🎯' },
-                { reached: activeDays >= 30,    label: '30 active days',      icon: '🌟' },
+                { reached: total >= 1,    label: 'First entry',       icon: '🌱' },
+                { reached: total >= 10,   label: '10 entries',        icon: '📗' },
+                { reached: total >= 50,   label: '50 entries',        icon: '🔥' },
+                { reached: total >= 100,  label: '100 entries',       icon: '💎' },
+                { reached: current >= 3,  label: '3-day streak',      icon: '⚡' },
+                { reached: current >= 7,  label: 'Week streak',       icon: '🗓️' },
+                { reached: current >= 30, label: 'Month streak',      icon: '🏆' },
+                { reached: longest >= 7,  label: '7-day best streak', icon: '🎯' },
+                { reached: active >= 30,  label: '30 active days',    icon: '🌟' },
               ].map(m => (
-                <div
-                  key={m.label}
+                <div key={m.label}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono border transition-all ${
-                    m.reached
-                      ? 'border-accent/40 bg-accent/10 text-accent'
-                      : 'border-border/40 bg-surface/50 text-muted/40 grayscale'
-                  }`}
-                >
+                    m.reached ? 'border-accent/40 bg-accent/10 text-accent' : 'border-border/40 bg-surface/50 text-muted/40 grayscale'
+                  }`}>
                   <span>{m.icon}</span>
                   <span>{m.label}</span>
                 </div>
@@ -335,52 +436,13 @@ export function StatsPage() {
           </div>
         )}
 
-        {/* ── AI Insights (coming soon placeholder) ── */}
-        <div className="bg-card border border-border rounded-xl p-5 relative overflow-hidden">
-          {/* Glow effect */}
-          <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-5 pointer-events-none"
-            style={{ background: 'radial-gradient(circle, #818cf8, transparent)', transform: 'translate(30%, -30%)' }} />
-
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={15} className="text-accent" />
-            <h2 className="text-xs font-mono text-muted uppercase tracking-widest">AI Insights</h2>
-            <span className="text-[10px] font-mono bg-accent/20 text-accent px-2 py-0.5 rounded-full ml-auto">
-              Coming soon
-            </span>
-          </div>
-
-          <div className="rounded-lg border border-dashed border-border/60 p-5 text-center">
-            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
-              <TrendingUp size={18} className="text-accent" />
-            </div>
-            <p className="text-sm text-secondary font-body mb-1">Weekly synthesis & insights</p>
-            <p className="text-xs text-muted font-body max-w-sm mx-auto">
-              Soon, an AI will read your entries and surface patterns — what you're building, what you're learning, and where you're spending your energy.
-            </p>
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <div className="flex items-center gap-1.5 text-xs text-muted font-mono">
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                Powered by Groq (free)
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted font-mono">
-                <div className="w-2 h-2 rounded-full bg-accent" />
-                Llama 3 70B
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Recent entries ── */}
+        {/* Recent entries */}
         {stats?.recentEntries && stats.recentEntries.length > 0 && (
           <div>
             <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-3">Recent entries</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {stats.recentEntries.slice(0, 6).map(entry => (
-                <EntryCard
-                  key={entry.id}
-                  entry={entry}
-                  onEdit={() => selectDate(parseISO(entry.entryDate))}
-                />
+                <EntryCard key={entry.id} entry={entry} onEdit={() => selectDate(parseISO(entry.entryDate))} />
               ))}
             </div>
           </div>
