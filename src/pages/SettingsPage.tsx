@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Sun, Moon, Clock } from 'lucide-react'
+import { Sun, Moon, Clock, Download, FileJson, FileText, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { githubApi } from '../api/github'
@@ -19,6 +19,10 @@ export function SettingsPage() {
   const [showRepos, setShowRepos] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  // Export state
+  const [exportingJson, setExportingJson] = useState(false)
+  const [exportingCsv,  setExportingCsv]  = useState(false)
 
   // Timezone state
   const [tzSearch, setTzSearch] = useState('')
@@ -135,6 +139,53 @@ export function SettingsPage() {
       showToast(`Stopped watching ${repoName}`)
     } catch {
       showToast('Failed to unwatch repo.')
+    }
+  }
+
+
+  const handleExportJson = async () => {
+    setExportingJson(true)
+    try {
+      const response = await fetch('/api/export/json', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('logbook_token') ?? ''}` }
+      })
+      if (!response.ok) throw new Error()
+      const blob     = await response.blob()
+      const url      = URL.createObjectURL(blob)
+      const a        = document.createElement('a')
+      a.href         = url
+      a.download     = response.headers.get('Content-Disposition')
+                          ?.match(/filename="(.+)"/)?.[1] ?? 'logbook-export.json'
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast('JSON export downloaded.')
+    } catch {
+      showToast('Export failed. Please try again.')
+    } finally {
+      setExportingJson(false)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    setExportingCsv(true)
+    try {
+      const response = await fetch('/api/export/csv', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('logbook_token') ?? ''}` }
+      })
+      if (!response.ok) throw new Error()
+      const blob     = await response.blob()
+      const url      = URL.createObjectURL(blob)
+      const a        = document.createElement('a')
+      a.href         = url
+      a.download     = response.headers.get('Content-Disposition')
+                          ?.match(/filename="(.+)"/)?.[1] ?? 'logbook-entries.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast('CSV export downloaded.')
+    } catch {
+      showToast('Export failed. Please try again.')
+    } finally {
+      setExportingCsv(false)
     }
   }
 
@@ -353,6 +404,68 @@ export function SettingsPage() {
             {tzSaving && (
               <p className="text-xs text-muted font-mono animate-pulse">Saving...</p>
             )}
+          </div>
+        </section>
+
+
+        {/* ── Export ── */}
+        <section>
+          <h2 className="text-xs font-mono text-muted uppercase tracking-widest mb-4">Export Data</h2>
+          <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4">
+
+            <div className="flex items-start gap-3">
+              <Download size={16} className="text-accent mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-text">Download your data</p>
+                <p className="text-xs text-muted mt-0.5">
+                  Export all your entries and goals. Your data is yours — take it any time.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+              {/* JSON — full export */}
+              <button
+                onClick={handleExportJson}
+                disabled={exportingJson}
+                className="flex items-start gap-3 p-4 rounded-xl border border-border hover:border-accent/40 hover:bg-surface transition-all disabled:opacity-50 text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
+                  {exportingJson
+                    ? <Loader2 size={16} className="text-accent animate-spin" />
+                    : <FileJson size={16} className="text-accent" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-mono font-medium text-text">JSON</p>
+                  <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                    Full export — entries, goals, milestones, tags and all metadata.
+                  </p>
+                </div>
+              </button>
+
+              {/* CSV — entries only */}
+              <button
+                onClick={handleExportCsv}
+                disabled={exportingCsv}
+                className="flex items-start gap-3 p-4 rounded-xl border border-border hover:border-accent/40 hover:bg-surface transition-all disabled:opacity-50 text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-emerald-400/10 flex items-center justify-center shrink-0 group-hover:bg-emerald-400/20 transition-colors">
+                  {exportingCsv
+                    ? <Loader2 size={16} className="text-emerald-400 animate-spin" />
+                    : <FileText size={16} className="text-emerald-400" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-mono font-medium text-text">CSV</p>
+                  <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                    Entries only — easy to open in Excel, Google Sheets, or Numbers.
+                  </p>
+                </div>
+              </button>
+
+            </div>
           </div>
         </section>
 
