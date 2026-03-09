@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useThemeStore } from '../../store/themeStore'
-import { format, parseISO, eachDayOfInterval, subDays } from 'date-fns'
+import { format, eachDayOfInterval, subDays } from 'date-fns'
 import type { HeatmapData } from '../../types'
 
 interface YearHeatmapProps {
@@ -51,14 +51,20 @@ export function YearHeatmap({ data, onDayClick }: YearHeatmapProps) {
 
     // Month labels
     const monthLabels: Array<{ label: string; col: number }> = []
-    let lastMonth = -1
-    weeks.forEach((w, wi) => {
-      const firstReal = w.find(d => d !== null)
-      if (firstReal) {
-        const m = parseISO(firstReal.date).getMonth()
-        if (m !== lastMonth) {
-          monthLabels.push({ label: format(parseISO(firstReal.date), 'MMM'), col: wi })
-          lastMonth = m
+    // Always label the first visible column.
+    monthLabels.push({ label: format(start, 'MMM'), col: 0 })
+
+    // Place month labels by where day=1 appears in the grid.
+    allDays.forEach((day, idx) => {
+      if (day.getDate() === 1) {
+        const col = Math.floor((startDow + idx) / 7)
+        const label = format(day, 'MMM')
+        const last = monthLabels[monthLabels.length - 1]
+        if (!last || last.col !== col) {
+          monthLabels.push({ label, col })
+        } else {
+          // If month changes within the same week column, show the new month.
+          monthLabels[monthLabels.length - 1] = { label, col }
         }
       }
     })
@@ -67,21 +73,21 @@ export function YearHeatmap({ data, onDayClick }: YearHeatmapProps) {
   }, [data])
 
   const cellSize = 12
-  const gap = 3
+  const colWidth = cellSize + 2 // gap-0.5 between week columns = 2px
 
   return (
     <div className="w-full overflow-x-auto">
       <div className="inline-block min-w-full">
         {/* Month labels */}
-        <div className="flex mb-1" style={{ paddingLeft: '28px' }}>
+        <div className="mb-1 relative" style={{ paddingLeft: '28px', height: '14px' }}>
           {months.map(({ label, col }) => (
-            <div
+            <span
               key={`${label}-${col}`}
               className="text-xs text-muted font-mono absolute"
-              style={{ left: `${28 + col * (cellSize + gap)}px`, position: 'relative', width: 0, whiteSpace: 'nowrap' }}
+              style={{ left: `${col * colWidth}px`, whiteSpace: 'nowrap' }}
             >
               {label}
-            </div>
+            </span>
           ))}
         </div>
 

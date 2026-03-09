@@ -15,6 +15,7 @@ interface EntryState {
   heatmap: HeatmapData | null
   isLoadingEntries: boolean
   isLoadingHeatmap: boolean
+  dataVersion: number
 
   // Actions
   setCurrentMonth: (month: Date) => void
@@ -35,6 +36,7 @@ export const useEntryStore = create<EntryState>((set, get) => ({
   heatmap: null,
   isLoadingEntries: false,
   isLoadingHeatmap: false,
+  dataVersion: 0,
 
   setCurrentMonth: (month) => {
     set({ currentMonth: month })
@@ -101,7 +103,8 @@ export const useEntryStore = create<EntryState>((set, get) => ({
       const key = entry.entryDate
       const existing = state.entriesByDate[key] || []
       return {
-        entriesByDate: { ...state.entriesByDate, [key]: [...existing, entry] }
+        entriesByDate: { ...state.entriesByDate, [key]: [...existing, entry] },
+        dataVersion: state.dataVersion + 1,
       }
     })
     // Refresh heatmap
@@ -110,15 +113,21 @@ export const useEntryStore = create<EntryState>((set, get) => ({
 
   updateEntry: (entry) => {
     set(state => {
+      // Remove stale copy from any cached date bucket, then insert latest value.
+      const nextByDate: Record<string, Entry[]> = {}
+      Object.entries(state.entriesByDate).forEach(([date, list]) => {
+        const filtered = list.filter(e => e.id !== entry.id)
+        if (filtered.length > 0) nextByDate[date] = filtered
+      })
+
       const key = entry.entryDate
-      const existing = state.entriesByDate[key] || []
+      const existing = nextByDate[key] || []
       return {
-        entriesByDate: {
-          ...state.entriesByDate,
-          [key]: existing.map(e => e.id === entry.id ? entry : e),
-        }
+        entriesByDate: { ...nextByDate, [key]: [...existing, entry] },
+        dataVersion: state.dataVersion + 1,
       }
     })
+    get().loadHeatmap()
   },
 
   removeEntry: (id, date) => {
@@ -128,7 +137,8 @@ export const useEntryStore = create<EntryState>((set, get) => ({
         entriesByDate: {
           ...state.entriesByDate,
           [date]: existing.filter(e => e.id !== id),
-        }
+        },
+        dataVersion: state.dataVersion + 1,
       }
     })
     get().loadHeatmap()

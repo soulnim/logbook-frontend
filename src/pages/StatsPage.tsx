@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { format, parseISO, subDays, getDay } from 'date-fns'
+import { format, parseISO, startOfWeek, endOfWeek, subWeeks } from 'date-fns'
 import {
   BarChart2, Flame, CalendarDays, TrendingUp, Sparkles,
   BookOpen, Zap, Brain, GitCommit, Star, Send, RefreshCw,
@@ -40,21 +40,36 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+function parseDateKey(dateKey: string): Date {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 function buildWeeklyBars(data: HeatmapData['data']) {
-  const today = new Date()
+  const dayCounts = new Map(data.map(d => [d.date, d.count]))
+  const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 })
+
   return Array.from({ length: 8 }, (_, i) => {
-    const weekEnd   = subDays(today, (7 - i) * 7)
-    const weekStart = subDays(weekEnd, 6)
-    const count = data
-      .filter(d => { const date = parseISO(d.date); return date >= weekStart && date <= weekEnd })
-      .reduce((s, d) => s + d.count, 0)
-    return { label: format(weekStart, 'MMM d'), count }
+    const weekStart = subWeeks(thisWeekStart, 7 - i)
+    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 })
+
+    let count = 0
+    for (
+      let cursor = new Date(weekStart);
+      cursor <= weekEnd;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
+    ) {
+      count += dayCounts.get(format(cursor, 'yyyy-MM-dd')) ?? 0
+    }
+
+    // Label by week end date so cross-month weeks read naturally in the current month.
+    return { label: format(weekEnd, 'MMM d'), count }
   })
 }
 
 function buildDowCounts(data: HeatmapData['data']) {
   const counts = [0, 0, 0, 0, 0, 0, 0]
-  data.forEach(d => { counts[getDay(parseISO(d.date))] += d.count })
+  data.forEach(d => { counts[parseDateKey(d.date).getDay()] += d.count })
   return counts
 }
 
@@ -258,7 +273,7 @@ function AiInsightsPanel() {
 // ── Main Stats Page ───────────────────────────────────────────────────────────
 
 export function StatsPage() {
-  const { selectDate } = useEntryStore()
+  const { selectDate, dataVersion } = useEntryStore()
   const [stats,        setStats]        = useState<StatsData | null>(null)
   const [heatmap,      setHeatmap]      = useState<HeatmapData | null>(null)
   const [goalSummary,  setGoalSummary]  = useState<GoalSummary | null>(null)
@@ -286,7 +301,7 @@ export function StatsPage() {
       }
     }
     load()
-  }, [])
+  }, [dataVersion])
 
   // ── Search entries with debounce ──
   useEffect(() => {
