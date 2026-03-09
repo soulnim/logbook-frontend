@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, parseISO, subDays, startOfMonth, endOfMonth, startOfYear } from 'date-fns'
+import { addYears, format, parseISO, subDays, startOfMonth, endOfMonth, startOfYear } from 'date-fns'
 import { Filter, ChevronDown, X, Search, List } from 'lucide-react'
 import { useEntryStore } from '../store/entryStore'
 import { entriesApi } from '../api/entries'
@@ -10,9 +10,10 @@ import { Navbar } from '../components/layout/Navbar'
 import type { Entry, EntryType } from '../types'
 import { ENTRY_TYPE_META } from '../types'
 
-type DatePreset = '7d' | '30d' | '90d' | 'thisMonth' | 'thisYear' | 'custom'
+type DatePreset = 'any' | '7d' | '30d' | '90d' | 'thisMonth' | 'thisYear' | 'custom'
 
 const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: 'any',       label: 'Any time'     },
   { value: '7d',        label: 'Last 7 days'  },
   { value: '30d',       label: 'Last 30 days' },
   { value: '90d',       label: 'Last 90 days' },
@@ -25,6 +26,7 @@ function getPresetDates(preset: DatePreset): { start: string; end: string } {
   const today = new Date()
   const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
   switch (preset) {
+    case 'any':       return { start: '1970-01-01',                   end: fmt(addYears(today, 100)) }
     case '7d':        return { start: fmt(subDays(today, 6)),         end: fmt(today) }
     case '30d':       return { start: fmt(subDays(today, 29)),        end: fmt(today) }
     case '90d':       return { start: fmt(subDays(today, 89)),        end: fmt(today) }
@@ -49,10 +51,10 @@ function groupByDate(entries: Entry[]): GroupedEntries {
 
 export function EntriesPage() {
   const navigate          = useNavigate()
-  const { selectDate }    = useEntryStore()
+  const { selectDate, dataVersion } = useEntryStore()
 
   const [activeType,      setActiveType]      = useState<EntryType | null>(null)
-  const [preset,          setPreset]          = useState<DatePreset>('30d')
+  const [preset,          setPreset]          = useState<DatePreset>('any')
   const [customStart,     setCustomStart]     = useState('')
   const [customEnd,       setCustomEnd]       = useState('')
   const [showCustom,      setShowCustom]      = useState(false)
@@ -77,7 +79,7 @@ export function EntriesPage() {
       finally { setIsLoading(false) }
     }
     load()
-  }, [dateRange, activeType])
+  }, [dateRange, activeType, dataVersion])
 
   const effectiveSearch = topSearch.trim() || filterSearch.trim()
   const filteredEntries = useMemo(() => {
@@ -202,9 +204,9 @@ export function EntriesPage() {
                 </>
               )}
             </span>
-            {(activeType || filterSearch || preset !== '30d') && (
+            {(activeType || filterSearch || preset !== 'any') && (
               <button
-                onClick={() => { setActiveType(null); setFilterSearch(''); setPreset('30d'); setShowCustom(false) }}
+                onClick={() => { setActiveType(null); setFilterSearch(''); setPreset('any'); setShowCustom(false) }}
                 className="ml-auto text-xs text-muted hover:text-secondary font-mono transition-colors"
               >
                 Clear filters
